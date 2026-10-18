@@ -687,23 +687,28 @@ const DEFINITIONS = [
 ];
 
 /**
- * 定石の並びのまとまり。基本ルール → 定石（定番） → 定石（基本） → 定石（応用） の順に出す。
- *   基本ルールは「まず覚える」（basic）の分類、定番は popular、応用は last を付けたもの
+ * 定石の並びのまとまり。基本ルール → 定石（定番） → 定石（基本） → 定石（応用） → 定石（発展） の順に出す。
+ *   基本ルールは「まず覚える」（basic）の分類、定番は popular、発展は last を付けたもの
  *   （数手先まで試す・2 つの数字をまとめて調べる、考え方の込み入ったもの）。
+ *   残りは、やさしいもの（level 3 まで）を基本、それより難しいものを応用にする。
  */
 export const GROUPS = [
   { id: 'basic', title: '基本ルール', lead: '数字の本数と、交点の線は 0 本か 2 本。まずはこれだけで進めます。' },
   { id: 'popular', title: '定石（定番）', lead: 'よく知られた形です。ほかの定石と結論が重なるものもありますが、ひと目で分かるので先に並べています。' },
-  { id: 'simple', title: '定石（基本）', lead: 'やさしい順に並べています。' },
-  { id: 'complex', title: '定石（応用）', lead: '何手か先まで考えたり、2 つの数字をまとめて考えたりするものです。行き詰まったら。' },
+  { id: 'simple', title: '定石（基本）', lead: 'ひと目で見つけやすい形です。' },
+  { id: 'applied', title: '定石（応用）', lead: '少し広く見て、いくつかの印を組み合わせて決まる形です。' },
+  { id: 'advanced', title: '定石（発展）', lead: '何手か先まで考えたり、2 つの数字をまとめて考えたりするものです。行き詰まったら。' },
 ];
+
+/** 定石（基本）に入る、いちばん難しい level。これより難しいものは定石（応用）。 */
+const SIMPLE_MAX_LEVEL = 3;
 
 /** その定石がどのまとまり（GROUPS の id）に入るか。 */
 export function groupOf(pattern) {
   if (pattern.popular) return 'popular';
-  if (pattern.last) return 'complex';
+  if (pattern.last) return 'advanced';
   if (pattern.category === 'basic') return 'basic';
-  return 'simple';
+  return pattern.level <= SIMPLE_MAX_LEVEL ? 'simple' : 'applied';
 }
 
 const GROUP_ORDER = new Map(GROUPS.map((g, i) => [g.id, i]));
