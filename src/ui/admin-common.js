@@ -32,7 +32,7 @@ export const adminUrl = (path) => new URL(`../../${path}`, import.meta.url).href
 /** 上のメニューに並べるページ。key は adminNav に渡す名前。 */
 const ADMIN_PAGES = [
   { key: 'books', label: '問題集', icon: 'menu_book', path: 'admin.html' },
-  { key: 'compare', label: 'くらべる', icon: 'compare_arrows', path: 'admin.html?view=compare' },
+  { key: 'compare', label: 'くらべる', icon: 'compare_arrows', path: 'admin/compare.html' },
   { key: 'problems', label: '問題一覧', icon: 'table_rows', path: 'admin/problems.html' },
   { key: 'patterns', label: '定石', icon: 'extension', path: 'admin/patterns.html' },
 ];

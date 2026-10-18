@@ -396,7 +396,7 @@ Cloudflare D1（データベース名 `gridloop`、スキーマは `migrations/`
 | ページ | URL | 中身 |
 |---|---|---|
 | 問題集 | `admin.html?book=ID` | 問題集を作る・取り込む・並べ替える |
-| くらべる | `admin.html?view=compare` | 問題集・作り方ごとに目安の平均をくらべる |
+| くらべる | `admin/compare.html` | 問題集・作り方ごとに目安の平均をくらべる（前の `admin.html?view=compare` からも移る） |
 | 問題一覧 | `admin/problems.html?book=…&sort=…` | 全部の問題を 1 つの表に（絞り込みと並べ替えも URL に残る） |
 | 問題の詳細 | `admin/problem.html?id=ID` | 1 問の盤・目安・くわしい解き味 |
 | 定石 | `admin/patterns.html` | 定石のまとまりと並び順を決める |
@@ -487,7 +487,8 @@ Cloudflare D1（データベース名 `gridloop`、スキーマは `migrations/`
   解いた印は D1 の book_solved に持つ（0006_book_solved.sql）。ゲームで解いて履歴を送ると、
   その問題コードが公開中（管理者のみを含む）の問題集の問題と同じなら、サーバーが印を付ける（時間はいちばん速いもの）。
 - **問題一覧**（`/admin/problems`）：全部の問題集の問題を 1 つの表に並べます。問題集・出どころ・大きさ・むずかしさで
-  絞り込み、列の見出しで並べ替えられます（絞り込みと並べ替えは URL に残ります）。行を押すと詳細へ。
+  絞り込み、列の見出しで並べ替えられます（絞り込みと並べ替えは URL に残ります）。問題集は複数選べます
+  （URL では `book=1,3`）。行を押すと詳細へ。
 - **問題の詳細**（`/admin/problem?id=…`）：盤（答えも見られる）、問題集の中での位置と前後の問題、情報と目安、
   くわしい解き味（メニューの「この問題の難易度」と同じ分析）を出します。
 
@@ -622,7 +623,8 @@ src/ui/digit-model.js  手書き数字のネットの重み（tools/train-digits
 src/ui/photo-import.js  写真から問題を作る画面
 src/ui/camera-capture.js パソコンのカメラで問題を撮る画面
 src/ui/account.js       Google アカウントでのログインと、サーバーとの同期
-src/ui/admin.js         管理画面（問題集の登録とくらべ）
+src/ui/admin.js         管理画面の問題集（問題の登録・取り込み・ランダムに作る）
+src/ui/admin-compare.js 管理画面のくらべる（admin/compare.html）
 src/ui/books.js         ゲームのメニューの「問題集」（公開中の問題集を遊ぶ）
 src/ui/admin-problems.js 管理画面の問題一覧（admin/problems.html）
 src/ui/admin-problem.js  管理画面の問題の詳細（admin/problem.html）
