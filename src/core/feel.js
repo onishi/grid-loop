@@ -37,6 +37,7 @@ export function thinkMoves(puzzle, stopAt = Infinity) {
  *   thinkMid   考える手が出てくる位置の平均（0 が序盤、1 が終盤）。大きいほど山場が後ろ
  *   quietGap   考える手のない区間のうち、いちばん長いもの（全体に対する割合）。息つける区間
  *   thinkEdges 考える手で決めた辺（どこで考えさせられたか）
+ *   thinkAt    考える手が出てきた位置（thinkEdges と同じ順。0 が序盤、1 が終盤）
  * 教師データ（とことん01）の 24×14 ふつうは、openings 0.2・thinkRate 10・thinkMid 0.58 くらい。
  */
 export function feelProfile(puzzle) {
@@ -72,6 +73,7 @@ export function feelProfile(puzzle) {
     quietGap: gap,
     think: at.length,
     thinkEdges,
+    thinkAt: at,
   };
 }
 

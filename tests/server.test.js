@@ -8,7 +8,7 @@ import { verifyGoogleIdToken, resetKeyCache } from '../server/google.js';
 
 const CLIENT_ID = 'test-client.apps.googleusercontent.com';
 const ORIGIN = 'https://gridloop.example';
-const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql']
+const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql', '0011_teacher_ids.sql']
   .map((f) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')).join('\n');
 
 /** D1 と同じ呼び方（prepare → bind → run/first/all、batch）ができる薄い入れ物。 */
@@ -270,6 +270,14 @@ test('問題集を作り、問題をまとめて足し、並べ替え・外し�
   await call(`/api/admin/books/${id}/problems/${detail.problems[0].id}`, { method: 'DELETE', cookie });
   detail = (await call(`/api/admin/books/${id}`, { cookie })).data;
   assert.deepEqual(detail.problems.map((p) => [p.position, p.code]), [[1, '7hCCC'], [2, '5eBBB']]);
+
+  // まとめて並べ替える。全部を 1 回ずつ並べたものだけ受けつける
+  const [x, y] = detail.problems.map((p) => p.id);
+  assert.equal((await call(`/api/admin/books/${id}/problems`, { method: 'PUT', cookie, body: { order: [y] } })).status, 400);
+  assert.equal((await call(`/api/admin/books/${id}/problems`, { method: 'PUT', cookie, body: { order: [y, y] } })).status, 400);
+  assert.equal((await call(`/api/admin/books/${id}/problems`, { method: 'PUT', cookie, body: { order: [y, x] } })).status, 200);
+  detail = (await call(`/api/admin/books/${id}`, { cookie })).data;
+  assert.deepEqual(detail.problems.map((p) => [p.position, p.code]), [[1, '5eBBB'], [2, '7hCCC']]);
 
   await call(`/api/admin/books/${id}`, { method: 'PATCH', cookie, body: { title: '初級編（改）', published: true } });
   let list = (await call('/api/admin/books', { cookie })).data.books;
@@ -544,4 +552,24 @@ test('定石の並べ方は、だれでも読めて、管理者だけが決め�
   // 既定に戻す
   assert.equal((await call('/api/admin/pattern-settings', { method: 'DELETE', cookie })).status, 200);
   assert.equal((await call('/api/pattern-settings')).data.settings, null);
+});
+
+test('保存済みの版の id と出どころの呼び名を「教師データ」にそろえる（0011）', () => {
+  const db = new DatabaseSync(':memory:');
+  const before = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql'];
+  for (const f of before) db.exec(readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'));
+  db.exec("INSERT INTO books (id, title, description, published, created_at, updated_at) VALUES (1, 'b', '', 0, 0, 0)");
+  const add = db.prepare('INSERT INTO book_problems (book_id, position, code, rows, cols, clue_count, source, created_at, origin, generator) VALUES (1, ?, ?, 5, 5, 9, ?, 0, ?, ?)');
+  const old = String.fromCodePoint(12491, 12467, 12522, 39080); // 名前を変える前の呼び名
+  add.run(1, 'a', `${old} v8 24×14（1 / 20）`, 'generated', 'old-8');
+  add.run(2, 'b', 'ランダム 5×5（1 / 3）', 'generated', 'random-1');
+  add.run(3, 'c', 'p1.png', 'scan', null);
+  add.run(4, 'd', '教師データ v7 5×5（1 / 1）', 'generated', 'teacher-7');
+  db.exec(readFileSync(new URL('../migrations/0011_teacher_ids.sql', import.meta.url), 'utf8'));
+  assert.deepEqual(db.prepare('SELECT source, generator FROM book_problems ORDER BY position').all().map((r) => [r.source, r.generator]), [
+    ['教師データ v8 24×14（1 / 20）', 'teacher-8'],
+    ['ランダム 5×5（1 / 3）', 'random-1'],
+    ['p1.png', null],
+    ['教師データ v7 5×5（1 / 1）', 'teacher-7'],
+  ]);
 });

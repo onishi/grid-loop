@@ -1577,6 +1577,10 @@ body.no-anim .app { transition: none !important; }
 .admin-book-form { display: grid; gap: 8px; }
 .admin-book-form textarea { resize: vertical; font: inherit; }
 .admin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.admin-problems-tools { margin: 0 0 8px; }
+.admin-problems-tools button { width: auto; margin: 0; display: inline-flex; align-items: center; gap: 4px; font-size: .82rem; padding: 6px 12px; }
+.admin-problems-tools button[hidden] { display: none; }
+.admin-filters .admin-search { min-width: 200px; flex: 1; }
 .admin-spacer { flex: 1; }
 .admin-check { display: inline-flex; align-items: center; gap: 6px; font-size: .84rem; color: var(--ink-soft); }
 .admin-visibility { min-width: 0; max-width: 100%; }

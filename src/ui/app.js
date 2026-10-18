@@ -50,6 +50,7 @@ const el = {
   fade: $('opt-fade'),
   fadeLines: $('opt-fade-lines'),
   gestures: $('opt-gestures'),
+  autobasic: $('opt-autobasic'),
   code: $('puzzle-code'),
   copy: $('btn-copy'),
   load: $('btn-load'),
@@ -143,6 +144,7 @@ function init() {
   el.fade.checked = prefs.fade !== false;
   el.fadeLines.checked = prefs.fadeLines !== false;
   el.gestures.checked = prefs.gestures !== false;
+  el.autobasic.checked = prefs.autobasic === true;
   if (prefs.theme) document.documentElement.dataset.theme = prefs.theme;
 
   board = new Board(el.board, {
@@ -269,6 +271,15 @@ function bindUI() {
       applyZeroCrosses();
       refreshAll();
       persist();
+    }
+    savePrefs();
+  });
+  el.autobasic.addEventListener('change', () => {
+    if (el.autobasic.checked && game.grid && !game.solved) {
+      // いまの盤面にも当てはめる（もどすで戻せるように、1 手として残す）
+      autoBasic();
+      commitStroke();
+      refreshAll();
     }
     savePrefs();
   });
@@ -1081,6 +1092,7 @@ function savePrefs() {
     fade: el.fade.checked,
     fadeLines: el.fadeLines.checked,
     gestures: el.gestures.checked,
+    autobasic: el.autobasic.checked,
     inputMode: board ? board.inputMode : 'line',
     drawer: isDrawerOpen(),
     patternsOnlyUsable,
@@ -1158,7 +1170,10 @@ function startPuzzle(puzzle, saved) {
   game.running = false;
   game.lastTick = Date.now();
 
-  if (!saved) applyZeroCrosses();
+  if (!saved) {
+    applyZeroCrosses();
+    autoBasic(setDirect);
+  }
   board.setPuzzle(puzzle, game.state);
   fitScreen();
   updateZoomControls(board.zoom.scale, board.maxScale());
@@ -1283,8 +1298,38 @@ function applyChange(edge, value) {
   game.pending.push([edge, before, value]);
 }
 
+/** 基本ルール（数字の本数・交点の線は 0 本か 2 本）。「基本ルールで決まる印を自動で置く」で使う。 */
+const BASIC_RULES = PATTERNS.filter((p) => ['clue-full', 'clue-rest', 'vertex-two', 'vertex-pair', 'vertex-dead'].includes(p.match));
+const setDirect = (edge, value) => { game.state[edge] = value; };
+
+/**
+ * 「基本ルールで決まる印を自動で置く」が有効なら、基本ルールで決まる印を、もう決まらなくなるまで置く。
+ * 序盤の長い作業を省いて、考える手だけを打てるようにするための補助（既定は無効）。
+ * set は印の置き方（既定は 1 手に含める applyChange。始めたとき・全部消したときは直接置く）。
+ * @returns {number} 置いた印の数
+ */
+function autoBasic(set = applyChange) {
+  if (!el.autobasic.checked || !game.grid || game.solved) return 0;
+  let placed = 0;
+  for (let round = 0; round < game.grid.edgeCount; round++) {
+    let changed = false;
+    for (const pattern of BASIC_RULES) {
+      for (const { edge, value } of findMatches(game.grid, game.puzzle.clues, game.state, pattern).fills) {
+        if (game.state[edge] !== UNKNOWN) continue;
+        set(edge, value);
+        placed++;
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  return placed;
+}
+
 function commitStroke() {
   if (game.pending.length === 0) return;
+  // 自分で置いた印から基本ルールで決まる印も、同じ 1 手として置く（もどすで一緒に戻る）
+  if (autoBasic()) refreshAll();
   game.undoStack.push(game.pending);
   if (game.undoStack.length > 400) game.undoStack.shift();
   game.redoStack.length = 0;
@@ -1332,6 +1377,7 @@ function clearBoard() {
     }
   }
   applyZeroCrosses();
+  autoBasic(setDirect);
   for (const change of entry) {
     if (game.state[change[0]] !== UNKNOWN) change[2] = game.state[change[0]];
   }
