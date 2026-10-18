@@ -7,7 +7,7 @@
  * 盤のまわりに書いてある文字（問題番号や題など）も読んで、問題のメタデータとして一緒に残す。
  */
 
-import { $, el, icon, api, startAdmin, checker, metricGuide, kindOf, kindLabel, KIND_LABEL, LEVEL_ORDER } from './admin-common.js';
+import { $, el, icon, api, startAdmin, adminNav, adminUrl, setCrumbs, checker, metricGuide, kindOf, kindLabel, KIND_LABEL, LEVEL_ORDER } from './admin-common.js';
 import { loadPhoto, guessCorners, readClues, rectify } from './image-reader.js';
 import { PhotoImport } from './photo-import.js';
 import { DIFFICULTIES, GENERATORS, LATEST_GENERATOR } from '../core/generator.js';
@@ -29,19 +29,28 @@ let editing = null;   // 「直す」で開いている取り込み
 
 /* ---------------- 起動とログイン ---------------- */
 
+/**
+ * URL で開く画面を決める（パーマリンク）。?view=compare ならくらべる画面、?book=ID ならその問題集、
+ * どちらも無ければいちばん新しい問題集。開いた画面に合わせて URL も書き換える。
+ */
 function start() {
+  const q = new URLSearchParams(location.search);
+  const compare = q.get('view') === 'compare';
+  adminNav(compare ? 'compare' : 'books');
+  setCrumbs([{ label: compare ? 'くらべる' : '問題集' }]);
   startAdmin(() => {
-    // 問題の詳細から「問題集で開く」で来たときは、その問題集を開く
-    const want = Number(new URLSearchParams(location.search).get('book')) || undefined;
-    booksLoading ??= loadBooks(want).finally(() => { booksLoading = null; });
+    const want = Number(q.get('book')) || undefined;
+    booksLoading ??= (compare ? loadBooks(null, false).then(openCompare) : loadBooks(want))
+      .finally(() => { booksLoading = null; });
   });
 }
 
 /* ---------------- 問題集 ---------------- */
 
-async function loadBooks(selectId) {
+async function loadBooks(selectId, open = true) {
   books = (await api('/api/admin/books')).books;
   renderBooks();
+  if (!open) return;
   const id = selectId ?? current?.book.id ?? books[0]?.id;
   if (id != null) await openBook(id);
   else $('book').hidden = true;
@@ -70,6 +79,9 @@ const VISIBILITY_NOTE = { public: '・公開中', admin: '・管理者のみ' };
 
 async function openBook(id) {
   current = await api(`/api/admin/books/${id}`);
+  history.replaceState(null, '', `?book=${current.book.id}`);
+  adminNav('books');
+  setCrumbs([{ label: '問題集', href: adminUrl('admin.html') }, { label: current.book.title }]);
   $('compare').hidden = true;
   $('book').hidden = false;
   document.querySelector('.admin').classList.remove('is-wide');
@@ -202,6 +214,9 @@ let compareData = null;
 let allRows = null;
 
 async function openCompare() {
+  history.replaceState(null, '', '?view=compare');
+  adminNav('compare');
+  setCrumbs([{ label: 'くらべる' }]);
   $('book').hidden = true;
   $('compare').hidden = false;
   // 表が横に長いので、くらべるあいだは画面の幅いっぱいを使う
@@ -406,7 +421,6 @@ function groupTable(heads, groupOf) {
 }
 
 function bindBooks() {
-  $('open-compare').addEventListener('click', () => openCompare());
   $('new-book').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const title = $('new-book-title').value.trim();

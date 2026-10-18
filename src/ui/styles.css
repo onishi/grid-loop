@@ -1505,6 +1505,56 @@ body.no-anim .app { transition: none !important; }
 .admin-back { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-soft); text-decoration: none; font-size: .86rem; }
 .admin-back .mi { font-size: 1.1rem; }
 .admin-account { display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--ink-soft); }
+/* 管理画面のページを行き来するメニューと、いまどこにいるかのパンくずリスト */
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.admin-tab {
+  display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 999px;
+  font-size: .84rem; color: var(--ink-soft); text-decoration: none;
+}
+.admin-tab .mi { font-size: 1.05rem; }
+.admin-tab:hover { background: var(--accent-soft); color: var(--ink); }
+.admin-tab[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.admin-tab-game { margin-left: 8px; }
+.admin-crumbs { margin: -6px 0 14px; font-size: .8rem; color: var(--ink-faint); }
+.admin-crumbs ol { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.admin-crumbs li + li::before { content: '›'; margin-right: 4px; color: var(--ink-faint); }
+.admin-crumbs a { color: var(--accent); text-decoration: none; }
+.admin-crumbs a:hover { text-decoration: underline; }
+.admin-crumbs [aria-current="page"] { color: var(--ink-soft); }
+@media (max-width: 600px) {
+  .admin-tab { padding: 6px 8px; }
+  .admin-tab .mi { display: none; }
+}
+
+/* 定石のまとまりと並び順（admin/patterns.html） */
+.admin-patterns { max-width: 860px; }
+.admin-pat-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 0; background: var(--surface);
+}
+.admin-pat-bar button { display: inline-flex; align-items: center; gap: 4px; font-size: .84rem; width: auto; margin: 0; }
+.admin-pat-status { font-size: .8rem; color: var(--ink-soft); }
+.admin-pat-group h3 { margin-top: 26px; }
+.admin-pat-group h3 small { margin-left: 6px; }
+.admin-pat-group .hint-text { margin: 0 0 8px; }
+.admin-pat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.admin-pat-row {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+}
+.admin-pat-figure .pat-svg { width: 56px; height: 56px; display: block; }
+.admin-pat-text { display: grid; gap: 2px; min-width: 0; }
+.admin-pat-text b { font-size: .86rem; }
+.admin-pat-text small { font-size: .74rem; color: var(--ink-faint); }
+.admin-pat-moves { display: inline-flex; align-items: center; gap: 4px; }
+.admin-pat-moves select { font-size: .8rem; padding: 4px 6px; width: auto; }
+.admin-icon-btn { width: 32px; height: 32px; padding: 0; margin: 0; display: inline-flex; align-items: center; justify-content: center; }
+.admin-icon-btn .mi { font-size: 1.1rem; }
+@media (max-width: 600px) {
+  .admin-pat-row { grid-template-columns: 44px minmax(0, 1fr); }
+  .admin-pat-figure .pat-svg { width: 44px; height: 44px; }
+  .admin-pat-moves { grid-column: 1 / -1; justify-content: flex-end; }
+}
 .admin-gate { max-width: 460px; margin: 40px auto; text-align: center; }
 .admin-gate[hidden], .admin-main[hidden], .admin-book[hidden], .admin-queue-head[hidden] { display: none; }
 .admin-main { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; align-items: start; }

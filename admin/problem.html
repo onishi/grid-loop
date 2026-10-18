@@ -16,9 +16,10 @@
 <div class="admin">
   <header class="admin-head">
     <h1 class="logo"><span class="logo-mark" aria-hidden="true"></span>Grid Loop 管理</h1>
-    <a class="admin-back" href="../admin.html"><span class="mi" aria-hidden="true">arrow_back</span>問題集へ</a>
+    <nav class="admin-tabs" id="admin-tabs" aria-label="管理画面のページ"></nav>
     <div class="admin-account" id="admin-account"></div>
   </header>
+  <nav class="admin-crumbs" id="admin-crumbs" aria-label="パンくずリスト"></nav>
 
   <section class="admin-gate" id="admin-gate">
     <p id="gate-text">確かめています…</p>
@@ -28,8 +29,6 @@
   <!-- 1 問の詳細：盤（答えも見られる）・情報と目安・くわしい解き味 -->
   <main class="admin-page-main admin-detail" id="admin-main" hidden>
     <nav class="admin-detail-nav">
-      <a class="admin-link" id="to-list" href="problems.html"><span class="mi" aria-hidden="true">table_rows</span>問題一覧へ</a>
-      <a class="admin-link" id="to-book"><span class="mi" aria-hidden="true">menu_book</span>問題集で開く</a>
       <span class="admin-spacer"></span>
       <a class="admin-link" id="prev" hidden><span class="mi" aria-hidden="true">chevron_left</span>前の問題</a>
       <a class="admin-link" id="next" hidden>次の問題<span class="mi" aria-hidden="true">chevron_right</span></a>

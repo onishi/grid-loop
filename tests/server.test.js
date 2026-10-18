@@ -8,7 +8,7 @@ import { verifyGoogleIdToken, resetKeyCache } from '../server/google.js';
 
 const CLIENT_ID = 'test-client.apps.googleusercontent.com';
 const ORIGIN = 'https://gridloop.example';
-const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql']
+const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql']
   .map((f) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')).join('\n');
 
 /** D1 と同じ呼び方（prepare → bind → run/first/all、batch）ができる薄い入れ物。 */
@@ -528,4 +528,20 @@ test('id の名前を変える前に保存した教師データの版も、版�
   assert.deepEqual(problems.map((p) => p.generator), ['teacher-5', 'random-1']);
   const one = (await call(`/api/admin/problems/${problems[0].id}`, { cookie })).data.problem;
   assert.equal(one.generator, 'teacher-5');
+});
+
+test('定石の並べ方は、だれでも読めて、管理者だけが決められる。おかしな値は入れない', async () => {
+  assert.deepEqual((await call('/api/pattern-settings')).data, { settings: null, updatedAt: null });
+  const user = await loginAs({ sub: 'user-1' });
+  const body = { settings: { groups: { 'clue-full': 'popular', zero: 'nowhere', 'BAD ID': 'basic' }, order: ['zero', 'clue-full', 'zero', 42] } };
+  assert.equal((await call('/api/admin/pattern-settings', { method: 'PUT', cookie: user.cookie, body })).status, 403);
+  const { cookie } = await loginAs({ sub: 'admin-1' });
+  const put = await call('/api/admin/pattern-settings', { method: 'PUT', cookie, body });
+  assert.equal(put.status, 200);
+  const got = (await call('/api/pattern-settings')).data;
+  assert.deepEqual(got.settings, { groups: { 'clue-full': 'popular' }, order: ['zero', 'clue-full'] });
+  assert.ok(got.updatedAt > 0);
+  // 既定に戻す
+  assert.equal((await call('/api/admin/pattern-settings', { method: 'DELETE', cookie })).status, 200);
+  assert.equal((await call('/api/pattern-settings')).data.settings, null);
 });

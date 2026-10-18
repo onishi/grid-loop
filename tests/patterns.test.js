@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LINE, CROSS } from '../src/core/grid.js';
 import { countSolutions, solveLogical } from '../src/core/solver.js';
-import { PATTERNS, CATEGORIES, GROUPS, groupOf, buildPattern, padded, expandForms, isSearchPattern } from '../src/core/patterns.js';
+import { PATTERNS, CATEGORIES, GROUPS, groupOf, applyPatternSettings, DEFAULT_PATTERN_IDS, buildPattern, padded, expandForms, isSearchPattern } from '../src/core/patterns.js';
 
 // alt を持つ定石は、別の形もそれぞれ 1 つの定石として確かめる
 const FORMS = PATTERNS.flatMap(expandForms);
@@ -177,4 +177,24 @@ test('近道の定石は、書いてある組み合わせだけで同じ結論�
       }
     }
   }
+});
+
+test('管理画面で決めた並べ方を当てると、まとまりと順が変わり、null で既定に戻る', () => {
+  const before = PATTERNS.map((p) => p.id);
+  try {
+    applyPatternSettings({ groups: { 'clue-full': 'advanced', nope: 'basic' }, order: ['pair-diagonal', 'clue-full'] });
+    const ids = PATTERNS.map((p) => p.id);
+    assert.equal(groupOf(PATTERNS.find((p) => p.id === 'clue-full')), 'advanced');
+    // 発展のまとまりの中は、決めた順（pair-diagonal → clue-full）が先、残りは既定の順
+    const adv = ids.filter((id) => groupOf(PATTERNS.find((p) => p.id === id)) === 'advanced');
+    assert.deepEqual(adv.slice(0, 2), ['pair-diagonal', 'clue-full']);
+    assert.equal(ids.length, before.length);
+    // まとまりの順は崩れない
+    const rank = new Map(GROUPS.map((g, i) => [g.id, i]));
+    for (let i = 1; i < PATTERNS.length; i++) assert.ok(rank.get(groupOf(PATTERNS[i - 1])) <= rank.get(groupOf(PATTERNS[i])));
+  } finally {
+    applyPatternSettings(null);
+  }
+  assert.deepEqual(PATTERNS.map((p) => p.id), before);
+  assert.deepEqual(DEFAULT_PATTERN_IDS, before);
 });

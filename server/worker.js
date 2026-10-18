@@ -57,6 +57,9 @@ async function route(request, env, url) {
     return json({ user: user && publicUser(user), isAdmin: !!user && isAdmin(user, env) });
   }
 
+  // 定石の並べ方は、ログインしていなくても読める（ゲームと定石一覧が使う）
+  if (pathname === '/api/pattern-settings' && method === 'GET') return getPatternSettings(env.DB);
+
   const user = await currentUser(request, env);
   if (!user) throw new HttpError(401, 'ログインしてください');
   const db = env.DB;
@@ -414,6 +417,11 @@ async function admin(request, db, url) {
   const method = request.method;
   const parts = url.pathname.split('/').filter(Boolean).slice(2); // ['books', id, 'problems', pid]
   if (parts[0] === 'compare' && parts.length === 1 && method === 'GET') return compareOrigins(db);
+  if (parts[0] === 'pattern-settings' && parts.length === 1 && method === 'PUT') return putPatternSettings(db, await body(request));
+  if (parts[0] === 'pattern-settings' && parts.length === 1 && method === 'DELETE') {
+    await db.prepare('DELETE FROM settings WHERE key = ?').bind(PATTERN_SETTINGS_KEY).run();
+    return json({ ok: true, settings: null });
+  }
   if (parts[0] === 'problems' && parts.length === 1 && method === 'GET') return allProblems(db);
   if (parts[0] === 'problems' && parts.length === 2 && method === 'GET') return oneProblem(db, Number(parts[1]));
   if (parts[0] !== 'books') throw new HttpError(404, 'ありません');
@@ -627,6 +635,37 @@ async function oneProblem(db, id) {
     prevId: prev.results[0]?.id ?? null,
     nextId: next.results[0]?.id ?? null,
   });
+}
+
+/* ---------------- 定石の並べ方（管理画面で決める） ---------------- */
+
+const PATTERN_SETTINGS_KEY = 'pattern-settings';
+/** 定石のまとまり（src/core/patterns.js の GROUPS）。知らない値は入れない。 */
+const PATTERN_GROUP_IDS = ['basic', 'popular', 'simple', 'applied', 'advanced'];
+const MAX_PATTERNS = 300;
+const patternId = (v) => (typeof v === 'string' && /^[a-z0-9-]{1,64}$/.test(v) ? v : null);
+
+async function getPatternSettings(db) {
+  const row = await db.prepare('SELECT value, updated_at FROM settings WHERE key = ?').bind(PATTERN_SETTINGS_KEY).first();
+  return json({ settings: row ? JSON.parse(row.value) : null, updatedAt: row?.updated_at ?? null });
+}
+
+/** 定石の並べ方を残す。{ groups: { 定石 id: まとまり }, order: [定石 id, ...] } の形のほかは入れない。 */
+async function putPatternSettings(db, b) {
+  const raw = b?.settings;
+  if (!raw || typeof raw !== 'object') throw new HttpError(400, '並べ方の形が違います');
+  const groups = {};
+  for (const [id, g] of Object.entries(raw.groups ?? {}).slice(0, MAX_PATTERNS)) {
+    if (patternId(id) && PATTERN_GROUP_IDS.includes(g)) groups[id] = g;
+  }
+  const order = [...new Set((Array.isArray(raw.order) ? raw.order : []).map(patternId).filter(Boolean))].slice(0, MAX_PATTERNS);
+  const settings = { groups, order };
+  const now = Date.now();
+  await db.prepare(
+    `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  ).bind(PATTERN_SETTINGS_KEY, JSON.stringify(settings), now).run();
+  return json({ ok: true, settings, updatedAt: now });
 }
 
 /** 問題の出どころ。決まった値のほかは入れない。 */

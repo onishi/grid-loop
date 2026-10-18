@@ -703,8 +703,8 @@ export const GROUPS = [
 /** 定石（基本）に入る、いちばん難しい level。これより難しいものは定石（応用）。 */
 const SIMPLE_MAX_LEVEL = 3;
 
-/** その定石がどのまとまり（GROUPS の id）に入るか。 */
-export function groupOf(pattern) {
+/** 既定で、その定石がどのまとまり（GROUPS の id）に入るか。 */
+export function defaultGroupOf(pattern) {
   if (pattern.popular) return 'popular';
   if (pattern.last) return 'advanced';
   if (pattern.category === 'basic') return 'basic';
@@ -714,15 +714,54 @@ export function groupOf(pattern) {
 const GROUP_ORDER = new Map(GROUPS.map((g, i) => [g.id, i]));
 
 /**
- * 定石の一覧。まとまり（GROUPS）の順に、定番は popular の順、ほかはやさしい順（level の小さい順。同じなら出番の多い順）。
+ * 管理画面で決めた並べ方（applyPatternSettings で当てる）。
+ *   groups: 既定と違うまとまりに入れる定石 { 定石 id: まとまりの id }
+ *   order:  定石 id の並び。まとまりの中はこの順（載っていない定石は、既定の順で後ろに）
+ */
+let settings = { groups: new Map(), order: new Map() };
+
+/** その定石がどのまとまり（GROUPS の id）に入るか。管理画面で決めたものが優先。 */
+export function groupOf(pattern) {
+  return settings.groups.get(pattern.id) ?? defaultGroupOf(pattern);
+}
+
+/** 既定の並べ方：まとまり（GROUPS）の順に、定番は popular の順、ほかはやさしい順（level の小さい順。同じなら出番の多い順）。 */
+function defaultCompare(a, b) {
+  return GROUP_ORDER.get(defaultGroupOf(a)) - GROUP_ORDER.get(defaultGroupOf(b))
+    || (a.popular ?? 0) - (b.popular ?? 0) || a.level - b.level || b.usage - a.usage || a.index - b.index;
+}
+
+const ALL = DEFINITIONS.map((pattern, index) => ({ ...pattern, usage: PATTERN_USAGE[pattern.id] ?? 0, index }));
+const DEFAULT_ORDER = [...ALL].sort(defaultCompare);
+const DEFAULT_RANK = new Map(DEFAULT_ORDER.map((p, i) => [p.id, i]));
+const strip = ({ index, ...pattern }) => pattern;
+
+/**
+ * 定石の一覧。まとまり（GROUPS）の順に並べ、まとまりの中は既定ならやさしい順。
+ * 管理画面で並べ方を決めてあれば、applyPatternSettings がこの配列をその順に並べ替える（同じ配列のまま）。
  * usage は 1 問を解くあいだにその定石で決められる辺の数の平均で、
  * tools/pattern-stats.js が実測して pattern-stats.js に書き出す。
  */
-export const PATTERNS = DEFINITIONS
-  .map((pattern, index) => ({ ...pattern, usage: PATTERN_USAGE[pattern.id] ?? 0, index }))
-  .sort((a, b) => GROUP_ORDER.get(groupOf(a)) - GROUP_ORDER.get(groupOf(b))
-    || (a.popular ?? 0) - (b.popular ?? 0) || a.level - b.level || b.usage - a.usage || a.index - b.index)
-  .map(({ index, ...pattern }) => pattern);
+export const PATTERNS = DEFAULT_ORDER.map(strip);
+
+/** 既定の並べ方での定石 id の並び（管理画面の「既定に戻す」で使う）。 */
+export const DEFAULT_PATTERN_IDS = DEFAULT_ORDER.map((p) => p.id);
+
+/**
+ * 管理画面で決めた並べ方を当てる。null なら既定に戻す。知らない定石・まとまりは読み飛ばす。
+ * @param {{groups?:Object<string,string>, order?:string[]}|null} next
+ */
+export function applyPatternSettings(next) {
+  const known = new Set(DEFAULT_PATTERN_IDS);
+  const groups = new Map(Object.entries(next?.groups ?? {})
+    .filter(([id, g]) => known.has(id) && GROUP_ORDER.has(g)));
+  const order = new Map((Array.isArray(next?.order) ? next.order : [])
+    .filter((id) => known.has(id)).map((id, i) => [id, i]));
+  settings = { groups, order };
+  const rank = (p) => order.get(p.id) ?? order.size + DEFAULT_RANK.get(p.id);
+  const sorted = [...PATTERNS].sort((a, b) => GROUP_ORDER.get(groupOf(a)) - GROUP_ORDER.get(groupOf(b)) || rank(a) - rank(b));
+  PATTERNS.splice(0, PATTERNS.length, ...sorted);
+}
 
 /**
  * 近道の定石なら「「A」・「B」を組み合わせれば、同じ結論にたどり着けます。」の一文を返す（そうでなければ null）。
