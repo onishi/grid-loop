@@ -199,9 +199,11 @@ export class BookShelf {
    * 遊ぶ問題は返すだけで、読み込みは呼ぶ側がする（途中まで解いた盤面があれば続きから開けるように）。
    * @returns {Promise<{code:string}>} その番号の問題。読めなければ（ログインしていない・無い）例外
    */
-  async enter(bookId, position) {
+  async enter(bookId, position, code = null) {
     const set = await api(`/api/books/${bookId}`);
-    const index = set.problems.findIndex((p) => p.position === position);
+    // 問題コードが分かっていれば、それで探す（並べ替えで番号が変わっていても同じ問題を開く）
+    const byCode = code ? set.problems.findIndex((p) => samePuzzle(p.code, code)) : -1;
+    const index = byCode >= 0 ? byCode : set.problems.findIndex((p) => p.position === position);
     if (index < 0) throw new Error(`この問題集に ${position} 番の問題はありません`);
     this.current = { book: set.book, problems: set.problems, index };
     this.remember();

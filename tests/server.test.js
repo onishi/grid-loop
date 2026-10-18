@@ -8,7 +8,7 @@ import { verifyGoogleIdToken, resetKeyCache } from '../server/google.js';
 
 const CLIENT_ID = 'test-client.apps.googleusercontent.com';
 const ORIGIN = 'https://gridloop.example';
-const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql', '0011_teacher_ids.sql']
+const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql', '0011_teacher_ids.sql', '0012_history_book.sql']
   .map((f) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')).join('\n');
 
 /** D1 と同じ呼び方（prepare → bind → run/first/all、batch）ができる薄い入れ物。 */
@@ -572,4 +572,16 @@ test('保存済みの版の id と出どころの呼び名を「教師データ�
     ['p1.png', null],
     ['教師データ v7 5×5（1 / 1）', 'teacher-7'],
   ]);
+});
+
+test('解いた履歴に、問題集で遊んでいたならその問題集と何問目かを残す', async () => {
+  const { cookie } = await loginAs({ sub: 'hist-book' });
+  await call('/api/history', { method: 'POST', cookie, body: { code: '5nHB1', rows: 5, cols: 5, difficulty: 'normal', seconds: 30, book: { id: 7, title: ' 初級編 ', position: 3 } } });
+  await call('/api/history', { method: 'POST', cookie, body: { code: '5nHB2', rows: 5, cols: 5, difficulty: 'normal', seconds: 20 } });
+  await call('/api/history', { method: 'POST', cookie, body: { code: '5nHB3', rows: 5, cols: 5, difficulty: 'normal', seconds: 25, book: { id: 'x' } } });
+  const { history } = (await call('/api/data', { cookie })).data;
+  const by = Object.fromEntries(history.map((h) => [h.code, h.book]));
+  assert.deepEqual(by['5nHB1'], { id: 7, title: '初級編', position: 3 });
+  assert.equal(by['5nHB2'], undefined);
+  assert.equal(by['5nHB3'], undefined); // おかしな問題集は残さない
 });

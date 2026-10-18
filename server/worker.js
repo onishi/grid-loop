@@ -243,7 +243,7 @@ async function loadAll(db, userId) {
   const [lib, hist, recs, game] = await db.batch([
     db.prepare('SELECT code, entry, added_at FROM library WHERE user_id = ? ORDER BY added_at DESC').bind(userId),
     db.prepare(
-      `SELECT code, rows, cols, difficulty, seconds, hints, patterns, solved_at FROM history
+      `SELECT code, rows, cols, difficulty, seconds, hints, patterns, solved_at, book_id, book_title, book_position FROM history
        WHERE user_id = ? ORDER BY solved_at DESC, id DESC LIMIT ${HISTORY_PAGE}`,
     ).bind(userId),
     db.prepare('SELECT key, seconds FROM records WHERE user_id = ?').bind(userId),
@@ -255,6 +255,7 @@ async function loadAll(db, userId) {
     history: hist.results.map((r) => ({
       code: r.code, rows: r.rows, cols: r.cols, difficulty: r.difficulty,
       seconds: r.seconds, hints: r.hints, patterns: r.patterns, solvedAt: r.solved_at,
+      book: r.book_id == null ? undefined : { id: r.book_id, title: r.book_title, position: r.book_position },
     })),
     records: Object.fromEntries(recs.results.map((r) => [r.key, r.seconds])),
     game: g ? { ...JSON.parse(g.game), updatedAt: g.updated_at } : null,
@@ -276,12 +277,17 @@ async function addHistory(db, userId, b) {
   const seconds = int(b.seconds, 0, 10 * 24 * 3600);
   const hints = int(b.hints, 0, 100000);
   const patterns = int(b.patterns, 0, 100000); // 定石を使った回数
+  // 問題集で遊んでいたなら、その問題集と何問目か（名前は解いたときのまま残す）
+  const book = b.book && typeof b.book === 'object' && Number.isInteger(b.book.id) && b.book.id > 0
+    ? { id: b.book.id, title: text(b.book.title, 100) || null, position: Number.isInteger(b.book.position) ? int(b.book.position, 1, 10000) : null }
+    : null;
   const key = `${rows}x${cols}:${difficulty}`;
   const before = await db.prepare('SELECT seconds FROM records WHERE user_id = ? AND key = ?').bind(userId, key).first();
   await db.batch([
     db.prepare(
-      'INSERT INTO history (user_id, code, rows, cols, difficulty, seconds, hints, patterns, solved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).bind(userId, code, rows, cols, difficulty, seconds, hints, patterns, Date.now()),
+      `INSERT INTO history (user_id, code, rows, cols, difficulty, seconds, hints, patterns, solved_at, book_id, book_title, book_position)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(userId, code, rows, cols, difficulty, seconds, hints, patterns, Date.now(), book?.id ?? null, book?.title ?? null, book?.position ?? null),
     recordStatement(db, userId, key, seconds),
     db.prepare(
       `DELETE FROM history WHERE user_id = ? AND id NOT IN
