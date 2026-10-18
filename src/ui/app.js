@@ -156,6 +156,8 @@ function init() {
     next: el.patNext,
     onApply: (item, how) => applyPattern(item.pattern, how),
     onReveal: revealPatternCard,
+    revealOn: prefs.patternReveal === true,
+    onRevealToggle: () => savePrefs(),
     onClose: () => hidePatterns(),
     onFocus: showPatternTitle,
     emptyActions: [
@@ -917,11 +919,11 @@ function showPatternTitle(item) {
   h2.replaceChildren(title, count);
 }
 
-/** 「候補」を押したカードの定石が当てはまる位置と、そこに入る線か × かを光らせる。 */
-function revealPatternCard(item) {
+/** 「候補」がオンのとき、見ているカードの定石が当てはまる位置と、そこに入る線か × かを光らせる。 */
+function revealPatternCard(item, scroll = true) {
   if (!item) { board.clearHints(); return; }
   board.setHints(item.fills.map((f) => f.edge), null, new Map(item.fills.map((f) => [f.edge, f.value])));
-  board.ensureVisible(item.fills[0].edge);
+  if (scroll) board.ensureVisible(item.fills[0].edge);
 }
 
 /** 拡大・縮小のボタンを、いまの倍率に合わせる。拡大できない小さな盤では出さない。 */
@@ -1067,6 +1069,7 @@ function savePrefs() {
     inputMode: board ? board.inputMode : 'line',
     drawer: isDrawerOpen(),
     patternsOnlyUsable,
+    patternReveal: cards ? cards.revealOn : false,
     theme: document.documentElement.dataset.theme || '',
   });
 }

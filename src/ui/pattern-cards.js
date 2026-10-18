@@ -1,7 +1,8 @@
 /**
  * いま使える定石を、ヒントと同じ場所にカードで並べる。左右にスワイプして切り替える。
  * カードを見ただけでは盤面のどこに効くかは出さない（自分で探せるように）。
- * 「候補」を押すと onReveal で知らせるので、当てはまる位置と決まる印を光らせられる。
+ * 「候補」はオン・オフの切り替えで、オンのあいだは見ているカードが変わっても、盤面が変わっても、
+ * onReveal で知らせ続けるので、当てはまる位置と決まる印をずっと光らせておける。
  */
 
 import { renderPattern } from './pattern-render.js';
@@ -22,7 +23,10 @@ export class PatternCards {
    * @param {HTMLButtonElement} parts.prev
    * @param {HTMLButtonElement} parts.next
    * @param {(item:object, how:'one'|'all')=>void} parts.onApply 「1 つだけ」「すべて」を押したとき
-   * @param {(item:object|null)=>void} parts.onReveal 「候補」で位置を出す（null で消す）
+   * @param {(item:object|null, scroll:boolean)=>void} parts.onReveal 「候補」で位置を出す（null で消す）。
+   *   scroll は、その位置が見えるように盤面を動かしてよいか（カードを替えたときだけ。盤面が変わって並べ直したときは動かさない）
+   * @param {boolean} [parts.revealOn] 「候補」を最初からオンにしておくか
+   * @param {(on:boolean)=>void} [parts.onRevealToggle] 「候補」のオン・オフが変わったとき（覚えておくため）
    * @param {()=>void} parts.onClose 「やめる」を押したとき
    * @param {(item:object|null)=>void} parts.onFocus 見ているカードが変わったとき
    * @param {Array<{label:string, run:()=>void}>} parts.emptyActions 使える定石が無いときのボタン
@@ -32,7 +36,7 @@ export class PatternCards {
     this.items = [];
     this.index = 0;
     this.focusedId = null;
-    this.revealedId = null;
+    this.revealOn = parts.revealOn === true;
     let frame = 0;
     this.track.addEventListener('scroll', () => {
       cancelAnimationFrame(frame);
@@ -100,25 +104,23 @@ export class PatternCards {
     const item = this.items[this.index] ?? null;
     const id = item ? item.pattern.id : null;
     if (force || id !== this.focusedId) {
+      const moved = id !== this.focusedId;
       this.focusedId = id;
-      // 別のカードへ移ったら、出していた位置は消す
-      this._setRevealed(null);
       this.onFocus(item);
+      // 候補がオンなら、移った先のカード（並べ直したなら新しい盤面）の位置を出す
+      if (this.revealOn) this.onReveal(item, moved);
     }
   }
 
-  /** 「候補」の位置を出す・消す。 */
-  _setRevealed(item) {
-    const id = item ? item.pattern.id : null;
-    if (id === this.revealedId && item) return;
-    const had = this.revealedId !== null;
-    this.revealedId = id;
+  /** 「候補」のオン・オフを切り替える。オンのあいだは、見ているカードの位置をずっと出す。 */
+  setRevealOn(on) {
+    this.revealOn = on;
     for (const b of this.track.querySelectorAll('.pc-reveal')) {
-      const on = b.closest('.pc-card').dataset.id === id;
       b.classList.toggle('is-on', on);
       b.setAttribute('aria-pressed', String(on));
     }
-    if (item || had) this.onReveal(item);
+    this.onReveal(on ? this.items[this.index] ?? null : null, true);
+    this.onRevealToggle?.(on);
   }
 
   _card(item) {
@@ -147,9 +149,10 @@ export class PatternCards {
       return b;
     };
     const reveal = button('pc-reveal', 'location_searching', '候補');
-    reveal.setAttribute('aria-pressed', 'false');
-    reveal.title = '当てはまる位置を盤面に出す';
-    reveal.addEventListener('click', () => this._setRevealed(this.revealedId === pattern.id ? null : item));
+    reveal.classList.toggle('is-on', this.revealOn);
+    reveal.setAttribute('aria-pressed', String(this.revealOn));
+    reveal.title = '当てはまる位置を盤面に出す（オンのあいだはずっと出す）';
+    reveal.addEventListener('click', () => this.setRevealOn(!this.revealOn));
     const one = button('pc-apply pc-apply-one', 'done', '1 つだけ');
     one.title = '当てはまる場所の 1 つ（盤を上の行から読んで最初のところ）だけに当てはめる';
     // 当てはまる場所が 1 つなら「すべて」と同じなので押せなくする
