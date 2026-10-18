@@ -9,7 +9,9 @@ import { DIFFICULTIES } from '../core/generator.js';
 import { decodePuzzle } from '../core/puzzle.js';
 import { teacherCheck } from '../core/teacher.js';
 
-const FILTERS = [['f-book', 'book'], ['f-kind', 'kind'], ['f-size', 'size'], ['f-level', 'level'], ['f-teacher', 'teacher']];
+const FILTERS = [['f-kind', 'kind'], ['f-size', 'size'], ['f-level', 'level'], ['f-teacher', 'teacher']];
+/** 問題集の絞り込みは複数選べる。選んだ問題集の id（空ならすべて）。URL では book=1,3 のように残す。 */
+let books = new Set();
 
 let allRows = [];
 let sortKey = 'bookTitle';
@@ -83,7 +85,7 @@ function fillFilters() {
     sel.length = 1;
     for (const [value, label] of items) sel.add(new Option(label, value));
   };
-  set('f-book', [...new Map(allRows.map((r) => [String(r.bookId), r.bookTitle]))]);
+  fillBooks([...new Map(allRows.map((r) => [String(r.bookId), r.bookTitle]))]);
   const sizes = [...new Map(allRows.map((r) => [r.size, r.rows * r.cols])).entries()].sort((a, b) => a[1] - b[1]);
   set('f-size', sizes.map(([s]) => [s, s]));
   set('f-level', LEVEL_ORDER.map((k) => [k, DIFFICULTIES[k].label]));
@@ -91,8 +93,45 @@ function fillFilters() {
   set('f-kind', Object.keys(KIND_LABEL).filter((k) => kinds.has(k)).map((k) => [k, KIND_LABEL[k]]));
 }
 
+/** 問題集の絞り込み：チェックを並べる。「すべて」は全部を外す（＝絞り込まない）。 */
+function fillBooks(items) {
+  const list = $('f-book-list');
+  list.textContent = '';
+  const all = el('button', 'admin-multi-clear', 'すべて');
+  all.type = 'button';
+  all.addEventListener('click', () => { books.clear(); syncBooks(); render(); });
+  list.append(all);
+  for (const [value, label] of items) {
+    const row = el('label', 'admin-multi-item');
+    const box = el('input');
+    box.type = 'checkbox';
+    box.value = value;
+    box.addEventListener('change', () => {
+      if (box.checked) books.add(value); else books.delete(value);
+      syncBooks();
+      render();
+    });
+    row.append(box, el('span', null, label));
+    list.append(row);
+  }
+}
+
+/** チェックと、閉じているときに見える「すべて」「○○ ほか 1」の文字を、選んだ問題集に合わせる。 */
+function syncBooks() {
+  const names = [];
+  for (const box of $('f-book-list').querySelectorAll('input')) {
+    box.checked = books.has(box.value);
+    if (box.checked) names.push(box.parentElement.textContent);
+  }
+  $('f-book-summary').textContent = !names.length ? 'すべて'
+    : names.length === 1 ? names[0] : `${names[0]} ほか ${names.length - 1}`;
+}
+
 function readUrl() {
   const q = new URLSearchParams(location.search);
+  const known = new Set(allRows.map((r) => String(r.bookId)));
+  books = new Set((q.get('book') ?? '').split(',').filter((v) => known.has(v)));
+  syncBooks();
   for (const [id, key] of FILTERS) {
     const v = q.get(key) ?? '';
     const sel = $(id);
@@ -105,17 +144,18 @@ function readUrl() {
 
 function writeUrl() {
   const q = new URLSearchParams();
+  if (books.size) q.set('book', [...books].join(','));
   for (const [id, key] of FILTERS) if ($(id).value) q.set(key, $(id).value);
   if (sortKey !== 'bookTitle') q.set('sort', sortKey);
   if (sortDir < 0) q.set('dir', 'desc');
-  const s = q.toString();
+  const s = q.toString().replace(/%2C/g, ','); // 問題集の id の区切りは、読みやすいように , のまま
   history.replaceState(null, '', s ? `?${s}` : location.pathname);
   try { sessionStorage.setItem('admin-problems-query', s ? `?${s}` : ''); } catch { /* 覚えられなくても困らない */ }
 }
 
 function filteredRows() {
-  const [book, kind, size, level, teacher] = FILTERS.map(([id]) => $(id).value);
-  return allRows.filter((r) => (!book || String(r.bookId) === book)
+  const [kind, size, level, teacher] = FILTERS.map(([id]) => $(id).value);
+  return allRows.filter((r) => (!books.size || books.has(String(r.bookId)))
     && (!kind || kindOf(r) === kind) && (!size || r.size === size) && (!level || r.difficulty === level)
     && (!teacher || (teacher === 'yes' ? r.teacher.ok === true : r.teacher.ok === false)));
 }
@@ -205,6 +245,13 @@ function render() {
 }
 
 for (const [id] of FILTERS) $(id).addEventListener('change', render);
+// 問題集の絞り込みは、外を押すか Esc で閉じる
+document.addEventListener('click', (ev) => { if (!$('f-book').contains(ev.target)) $('f-book').open = false; });
+$('f-book').addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape') return;
+  $('f-book').open = false;
+  $('f-book').querySelector('summary').focus();
+});
 $('f-count').before(metricGuide());
 adminNav('problems');
 setCrumbs([{ label: '問題一覧' }]);

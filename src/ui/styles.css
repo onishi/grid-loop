@@ -1636,6 +1636,25 @@ body.no-anim .app { transition: none !important; }
 .admin-tab-panel { overflow-x: auto; }
 .admin-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .admin-filters .field { min-width: 120px; }
+/* 複数選べる絞り込み（問題集）。閉じているときは select と同じ見た目、開くとチェックが並ぶ */
+.admin-multi { position: relative; }
+.admin-multi details > summary {
+  list-style: none; cursor: pointer; padding: 8px 28px 8px 10px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface-2); font-size: .92rem; max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  position: relative;
+}
+.admin-multi details > summary::-webkit-details-marker { display: none; }
+.admin-multi details > summary::after { content: '▾'; position: absolute; right: 10px; color: var(--ink-soft); }
+.admin-multi details[open] > summary { border-color: var(--accent); }
+.admin-multi-list {
+  position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; min-width: 220px; max-height: 320px; overflow-y: auto;
+  display: grid; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.admin-multi-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; font-size: .84rem; cursor: pointer; }
+.admin-multi-item:hover { background: var(--accent-soft); }
+.admin-multi-item input { width: auto; margin: 0; }
+.admin-multi-clear { width: auto; margin: 0 0 4px; padding: 4px 10px; font-size: .8rem; justify-self: start; }
 .admin-filter-count { margin: 4px 0 6px; font-size: .8rem; color: var(--ink-faint); }
 .admin-table-wrap { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
 .admin-problem-table th { position: sticky; top: 0; background: var(--surface); z-index: 1; }

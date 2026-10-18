@@ -30,7 +30,12 @@
   <main class="admin-page-main" id="admin-main" hidden>
     <h2>問題一覧</h2>
     <div class="admin-filters">
-      <label class="field"><span>問題集</span><select id="f-book"><option value="">すべて</option></select></label>
+      <div class="field admin-multi"><span id="f-book-label">問題集</span>
+        <details id="f-book">
+          <summary aria-labelledby="f-book-label f-book-summary"><span id="f-book-summary">すべて</span></summary>
+          <div class="admin-multi-list" id="f-book-list" role="group" aria-labelledby="f-book-label"></div>
+        </details>
+      </div>
       <label class="field"><span>作り方</span><select id="f-kind"><option value="">すべて</option></select></label>
       <label class="field"><span>大きさ</span><select id="f-size"><option value="">すべて</option></select></label>
       <label class="field"><span>むずかしさ</span><select id="f-level"><option value="">すべて</option></select></label>
