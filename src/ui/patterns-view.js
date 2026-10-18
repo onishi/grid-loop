@@ -3,7 +3,7 @@
  * ゲーム画面のサイドバーからも、単独ページからも、同じものを使う。
  */
 
-import { PATTERNS, CATEGORIES, combinesText } from '../core/patterns.js';
+import { PATTERNS, CATEGORIES, GROUPS, groupOf, combinesText } from '../core/patterns.js';
 import { renderPattern, renderSwatch } from './pattern-render.js';
 
 const LEGEND = [
@@ -21,20 +21,11 @@ const el = (tag, className, text) => {
   return node;
 };
 
-/**
- * 段に分ける。先頭は定番（よく知られた形）、そのあとは出番の多さ
- * （usage は 1 問あたりに決められる辺の本数）。
- */
-const TIERS = [
-  { id: 'popular', title: '定番', test: (p) => p.popular,
-    lead: 'このパズルでよく知られた形です。ほかの定石と結論が重なるものもありますが、ひと目で分かるので先に並べています。' },
-  { id: 'often', title: 'よく使う', test: (p) => !p.popular && p.usage >= 5, lead: 'ほぼ毎問、何度も出てきます。' },
-  { id: 'sometimes', title: 'ときどき使う', test: (p) => !p.popular && p.usage >= 1 && p.usage < 5, lead: '行き詰まったら探してみる形です。' },
-  { id: 'rare', title: 'たまに使う', test: (p) => !p.popular && p.usage < 1, lead: '出番は少ないものの、見つかると一気に進みます。', folded: true },
-];
+/** 段に分ける。定番 → 基本ルール → シンプルな定石 → 複雑な定石（patterns.js の GROUPS）。 */
+const TIERS = GROUPS.map((g) => ({ ...g, test: (p) => groupOf(p) === g.id }));
 
 /**
- * 定石一覧をまるごと container の中に作る。出番の多さで 3 段に分け、段の中も多い順に並べる。
+ * 定石一覧をまるごと container の中に作る。定番・基本ルール・シンプルな定石・複雑な定石の段に分け、段の中はやさしい順に並べる。
  * @param {HTMLElement} container
  * @param {object} [options]
  * @param {(pattern:object)=>void} [options.onApply] 「当てはめる」を押したときの処理（盤面があるとき）
@@ -151,7 +142,7 @@ function legend(open) {
     list.appendChild(li);
   }
   box.append(list, el('p', 'legend-note',
-    '出番は、1 問を解くあいだにその定石で決められる辺の本数（実測の平均）です。段の中も出番の多い順に並んでいます。'));
+    '出番は、1 問を解くあいだにその定石で決められる辺の本数（実測の平均）です。段の中はやさしい順（同じなら出番の多い順）に並んでいます。'));
   return box;
 }
 

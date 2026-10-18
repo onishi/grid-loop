@@ -869,7 +869,7 @@ function isPatternsOpen() {
   return !el.patPanel.hidden;
 }
 
-/** いま使える定石を、出番の多い順に集める。 */
+/** いま使える定石を、一覧と同じ順（定番 → 基本ルール → シンプルな定石 → 複雑な定石）に集める。 */
 function usablePatterns() {
   const items = [];
   for (const pattern of PATTERNS) {

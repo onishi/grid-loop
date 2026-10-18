@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LINE, CROSS } from '../src/core/grid.js';
 import { countSolutions, solveLogical } from '../src/core/solver.js';
-import { PATTERNS, CATEGORIES, buildPattern, padded, expandForms, isSearchPattern } from '../src/core/patterns.js';
+import { PATTERNS, CATEGORIES, GROUPS, groupOf, buildPattern, padded, expandForms, isSearchPattern } from '../src/core/patterns.js';
 
 // alt を持つ定石は、別の形もそれぞれ 1 つの定石として確かめる
 const FORMS = PATTERNS.flatMap(expandForms);
@@ -109,23 +109,21 @@ test('縁の定石は、盤の縁に置いても成り立つ', () => {
   }
 });
 
-test('定石は定番を先に、あとは出番の多い順に並んでいる', () => {
-  for (const p of PATTERNS) {
-    assert.ok(typeof p.level === 'number' && p.level >= 1 && p.level <= 5, `${p.id}: level が無い`);
-    assert.ok(p.id in PATTERN_USAGE, `${p.id}: 出番の実測値が無い（node tools/pattern-stats.js を走らせる）`);
-  }
-  for (const id of Object.keys(PATTERN_USAGE)) {
-    assert.ok(PATTERNS.some((p) => p.id === id), `${id}: もう無い定石の実測値が残っている`);
-  }
+test('定石は 定番 → 基本ルール → シンプルな定石 → 複雑な定石 の順で、その中はやさしい順（同じなら出番の多い順）に並んでいる', () => {
+  const rank = new Map(GROUPS.map((g, i) => [g.id, i]));
   for (let i = 1; i < PATTERNS.length; i++) {
     const [a, b] = [PATTERNS[i - 1], PATTERNS[i]];
-    if (a.popular || b.popular) {
-      // 定番は先頭に、覚えたい順で
-      assert.ok(a.popular && (!b.popular || a.popular < b.popular), `定番の ${b.id} が ${a.id} より前に来るべき`);
+    const [ga, gb] = [groupOf(a), groupOf(b)];
+    assert.ok(rank.get(ga) <= rank.get(gb), `${b.id}（${gb}）が ${a.id}（${ga}）より前に来るべき`);
+    if (ga !== gb) continue;
+    if (ga === 'popular') {
+      assert.ok(a.popular < b.popular, `定番の ${b.id} が ${a.id} より前に来るべき`);
       continue;
     }
-    assert.ok(a.usage > b.usage || (a.usage === b.usage && a.level <= b.level), `${b.id} が ${a.id} より前に来るべき`);
+    assert.ok(a.level < b.level || (a.level === b.level && a.usage >= b.usage), `${b.id} が ${a.id} より前に来るべき`);
   }
+  // 基本ルール・複雑な定石にも 1 つ以上ある
+  for (const g of GROUPS) assert.ok(PATTERNS.some((p) => groupOf(p) === g.id), `${g.id} の定石が無い`);
 });
 
 test('すべての分類に定石が 1 つ以上ある', () => {

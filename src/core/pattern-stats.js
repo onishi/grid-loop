@@ -5,7 +5,8 @@
  */
 export const PATTERN_USAGE = {
   'no-shortcut-loop': 133.9,
-  'pair-corners': 133,
+  'pair-adjacent': 116.8,
+  'pair-diagonal': 102.9,
   'corners-1': 53.3,
   'corners-2': 52.6,
   'clue-full': 40.2,
@@ -43,11 +44,11 @@ export const PATTERN_USAGE = {
   'three-three': 0.6,
   'corner-three': 0.5,
   'corner-two-one': 0.4,
-  'three-three-diagonal-two': 0.3,
   'three-ones-l': 0.3,
+  'three-three-diagonal-two': 0.3,
   'corner-two': 0.2,
-  'corner-two-three': 0.2,
   'border-one-one': 0.2,
+  'corner-two-three': 0.2,
   'three-zero-three': 0,
   'three-three-three': 0,
   'corner-one-one': 0,
