@@ -38,9 +38,9 @@ test('閉じた区画：線と × で囲まれ、外から線が入る余地の�
   assert.equal(leak.id[cell(g, 3, 1)], -1);
   assert.equal(leak.id[cell(g, 2, 1)], -1);
   assert.equal(leak.id[cell(g, 1, 1)], 0);
-  // 盤の角：内側 2 辺が線、外周 2 辺が × なら閉じている
-  const corner = closedRegions(g, board(g, [['v', 0, 1], ['h', 1, 0]], [['h', 0, 0], ['v', 0, 0]]));
-  assert.equal(corner.id[0], 0);
+  // 盤の角：外周の辺まで線で囲めば塗る。外周の辺が × なら（輪の外側になるので）塗らない
+  assert.equal(closedRegions(g, board(g, box(0, 0))).id[0], 0);
+  assert.equal(closedRegions(g, board(g, [['v', 0, 1], ['h', 1, 0]], [['h', 0, 0], ['v', 0, 0]])).count, 0);
   // × だけで囲まれたマス（0 のまわり）は塗らない
   assert.equal(closedRegions(g, board(g, [], box(2, 2))).count, 0);
 });

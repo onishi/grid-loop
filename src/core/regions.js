@@ -2,6 +2,7 @@
  * 閉じた区画。線と ×（もう線の入らない辺）で囲まれて、外から線が入る余地のないマスのまとまり。
  * 盤の外から、まだ決まっていない辺だけを通って届くマスは「開いている」。届かないマスを、線でない辺（× かまだ決まっていない辺）で
  * つないでまとめ、線に接しているものを「閉じた区画」とする（× だけで囲まれた 0 のまわりなどは数えない）。
+ * ただし、盤の外周に線でない辺（×）があるまとまりは、輪の外側になる側なので塗らない。
  * 設定「線で囲まれた区画に色をつける」で、閉じた区画に色を塗る（閉じた区画を 2 つ以上作ってしまわないように気づける）。
  */
 
@@ -42,7 +43,7 @@ export function closedRegions(grid, state) {
     }
   }
 
-  // 届かないマスを、線でない辺でつないでまとめる。線に接するまとまりだけを区画にする
+  // 届かないマスを、線でない辺でつないでまとめる。線に接し、外周に線でない辺の無いまとまりだけを区画にする
   const id = new Int32Array(cellCount).fill(-1);
   const seen = new Uint8Array(cellCount);
   let count = 0;
@@ -51,15 +52,17 @@ export function closedRegions(grid, state) {
     const group = [start];
     seen[start] = 1;
     let touchesLine = false;
+    let outerCross = false;
     for (let i = 0; i < group.length; i++) {
       for (const [to, edge] of around(group[i])) {
         if (state[edge] === LINE) { touchesLine = true; continue; }
-        if (to < 0 || reached[to] || seen[to]) continue;
+        if (to < 0) { outerCross = true; continue; }
+        if (reached[to] || seen[to]) continue;
         seen[to] = 1;
         group.push(to);
       }
     }
-    if (!touchesLine) continue;
+    if (!touchesLine || outerCross) continue;
     for (const cell of group) id[cell] = count;
     count++;
   }
