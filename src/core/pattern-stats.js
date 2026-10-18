@@ -41,6 +41,7 @@ export const PATTERN_USAGE = {
   'corner-one-three': 1,
   'three-three-two': 0.9,
   'one-one-cross-end': 0.8,
+  'three-lines-one-diagonal': 0.8,
   'three-three': 0.6,
   'corner-three': 0.5,
   'corner-two-one': 0.4,
@@ -51,5 +52,7 @@ export const PATTERN_USAGE = {
   'corner-two-three': 0.2,
   'three-zero-three': 0,
   'three-three-three': 0,
+  'corner-three-one': 0,
   'corner-one-one': 0,
+  'three-two-three-diagonal': 0,
 };
