@@ -7,6 +7,7 @@ import { renderPatternsInto } from './patterns-view.js';
 import { findMatches } from '../core/pattern-match.js';
 import { PATTERNS } from '../core/patterns.js';
 import { loadPatternSettings } from './pattern-settings.js';
+import { lineRegions, regionColors } from '../core/regions.js';
 import { PuzzleService } from './puzzle-service.js';
 import { PatternCards } from './pattern-cards.js';
 import { PhotoImport } from './photo-import.js';
@@ -51,6 +52,7 @@ const el = {
   fadeLines: $('opt-fade-lines'),
   gestures: $('opt-gestures'),
   autobasic: $('opt-autobasic'),
+  regions: $('opt-regions'),
   code: $('puzzle-code'),
   copy: $('btn-copy'),
   load: $('btn-load'),
@@ -145,6 +147,7 @@ function init() {
   el.fadeLines.checked = prefs.fadeLines !== false;
   el.gestures.checked = prefs.gestures !== false;
   el.autobasic.checked = prefs.autobasic === true;
+  el.regions.checked = prefs.regions === true;
   if (prefs.theme) document.documentElement.dataset.theme = prefs.theme;
 
   board = new Board(el.board, {
@@ -282,6 +285,10 @@ function bindUI() {
       refreshAll();
       persist();
     }
+    savePrefs();
+  });
+  el.regions.addEventListener('change', () => {
+    updateRegions();
     savePrefs();
   });
   el.autobasic.addEventListener('change', () => {
@@ -1116,6 +1123,7 @@ function savePrefs() {
     fadeLines: el.fadeLines.checked,
     gestures: el.gestures.checked,
     autobasic: el.autobasic.checked,
+    regions: el.regions.checked,
     inputMode: board ? board.inputMode : 'line',
     drawer: isDrawerOpen(),
     patternsOnlyUsable,
@@ -1417,8 +1425,28 @@ function clearBoard() {
 
 /* ---------------- 表示の更新 ---------------- */
 
+/** 区画の色の数（styles.css の .region-cell.rc0〜rc7）。 */
+const REGION_PALETTE = 8;
+let regionPrev = null;   // 前に塗った色（マスごと）。区画がつながったり分かれたりしても色を引き継ぐため
+let regionPuzzle = null; // その色を塗った問題
+
+/**
+ * 設定「線で囲まれた区画に色をつける」が有効なら、引いた線（と盤の縁）で分かれたマスの区画を色分けする。
+ * 区画が 1 つだけのときは塗らない。
+ */
+function updateRegions() {
+  if (!board || !game.grid) return;
+  if (regionPuzzle !== game.puzzle) { regionPrev = null; regionPuzzle = game.puzzle; }
+  const colors = el.regions.checked
+    ? regionColors(lineRegions(game.grid, game.state), regionPrev, REGION_PALETTE)
+    : null;
+  regionPrev = colors;
+  board.setRegions(colors);
+}
+
 function refreshAll() {
   board.refresh();
+  updateRegions();
   const a = analyze(game.grid, game.puzzle.clues, game.state);
   updateButtons();
   // 全定石を数え直しても 1ms 未満なので、盤面が動くたびに更新してよい
@@ -1478,7 +1506,11 @@ function showOverlay(isBest) {
   big.textContent = formatTime(game.elapsed);
   const sub = document.createElement('p');
   sub.textContent = `${game.puzzle.rows} × ${game.puzzle.cols} ・ ${diff}`;
-  el.overlayCard.append(h, big, sub);
+  // ヒントを見た回数と、定石を当てはめた回数（解いた履歴と同じ書き方）
+  const help = document.createElement('p');
+  help.className = 'overlay-help';
+  help.textContent = helpNotes({ hints: game.hints ?? 0, patterns: game.patterns ?? 0 }).join('・');
+  el.overlayCard.append(h, big, sub, help);
   // 問題集で遊んでいるなら、問題集の名前と何番か、次の問題へ進むか・メニュー（問題集の問題の一覧）へ戻るか
   const where = shelfInstance?.where();
   if (where) {

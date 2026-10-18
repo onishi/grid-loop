@@ -370,6 +370,7 @@ body.focus-mode .drawer-scrim, body.focus-mode #patterns-drawer { display: none 
 .overlay-card h2 { margin: 0 0 6px; font-size: 1.25rem; }
 .overlay-card p { margin: 4px 0; color: var(--ink-soft); font-size: .9rem; }
 .overlay-card .big { font-size: 1.55rem; font-weight: 700; color: var(--accent); margin: 6px 0; }
+.overlay-card .overlay-help { font-size: .8rem; color: var(--ink-faint); }
 .overlay-card .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
 .overlay-card .next-settings {
   display: grid;
@@ -930,6 +931,18 @@ button.rules-link:hover { background: none; }
 /* 読み込み直後の復元では動かさない */
 body.no-anim .drawer,
 body.no-anim .app { transition: none !important; }
+
+/* ---------- 線で囲まれた区画の色（設定でオンのときだけ） ---------- */
+.region-cell { fill: transparent; pointer-events: none; transition: fill .2s ease; }
+.region-cell[class*="rc"] { fill-opacity: .2; }
+.region-cell.rc0 { fill: #2f9e7a; }
+.region-cell.rc1 { fill: #e0a020; }
+.region-cell.rc2 { fill: #d0587a; }
+.region-cell.rc3 { fill: #3a8fd8; }
+.region-cell.rc4 { fill: #8a63c8; }
+.region-cell.rc5 { fill: #7aa82a; }
+.region-cell.rc6 { fill: #e06a2c; }
+.region-cell.rc7 { fill: #2fb0c0; }
 
 /* ---------- ヒントの根拠表示 ---------- */
 .focus-cell {
