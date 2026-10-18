@@ -219,6 +219,16 @@ async function openBookFromUrl(bookId, position) {
   }
 }
 
+/** 履歴の問題集の問題を、問題集の中の問題として開き直す。問題集が開けなければ（非公開になったなど）問題だけ開く。 */
+async function replayBookProblem(h) {
+  try {
+    const problem = await shelf().enter(h.book.id, h.book.position, h.code);
+    tryLoadCode(problem.code, false);
+  } catch {
+    tryLoadCode(h.code, false);
+  }
+}
+
 /**
  * 問題集で遊んでいるかを画面と URL に出す。問題集の問題なら、上の帯に問題集の名前と何番か、
  * URL は問題集の何番かを指すもの（?book=ID&n=番号。開き直しても、送っても同じ問題が開く）。
@@ -632,13 +642,26 @@ function renderHistory() {
     const sub = document.createElement('small');
     const time = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
     sub.textContent = [time, ...helpNotes(h)].join('・');
-    text.append(main, sub);
-    label.append(icon('task_alt'), text);
+    text.append(main);
+    // 問題集で遊んだ問題なら、問題集の名前と何問目か
+    if (h.book) {
+      const book = document.createElement('small');
+      book.className = 'history-book';
+      book.textContent = `${h.book.title ?? '問題集'}${h.book.position ? `　${h.book.position} 問目` : ''}`;
+      text.append(book);
+    }
+    text.append(sub);
+    label.append(icon(h.book ? 'menu_book' : 'task_alt'), text);
     const play = document.createElement('button');
     play.type = 'button';
     play.className = 'with-icon';
     play.append(icon('replay'), 'もう一度');
-    play.addEventListener('click', () => { if (tryLoadCode(h.code, false)) closeMenu(); });
+    // 問題集の問題は、問題集の中の問題として開き直す（次の問題へ進める）。開けなければ問題だけ
+    play.addEventListener('click', () => {
+      closeMenu();
+      if (h.book) replayBookProblem(h);
+      else if (!tryLoadCode(h.code, false)) openMenu();
+    });
     li.append(label, play);
     el.historyList.appendChild(li);
   }
@@ -1429,11 +1452,13 @@ function checkSolved() {
   const key = `${game.puzzle.rows}x${game.puzzle.cols}:${game.puzzle.difficulty}`;
   const isBest = store.saveRecord(key, game.elapsed);
   game.solvedBest = isBest; // 「盤面を見る」のあと、結果を出し直すときに使う
-  // ログイン中は、解いた問題を履歴に残す（サーバーにも送る）
+  // ログイン中は、解いた問題を履歴に残す（サーバーにも送る）。問題集で遊んでいたなら、その問題集と何問目かも
+  const where = shelfInstance?.where();
   store.addHistory({
     code: game.puzzle.code || encodePuzzle(game.puzzle),
     rows: game.puzzle.rows, cols: game.puzzle.cols, difficulty: game.puzzle.difficulty,
     seconds: game.elapsed, hints: game.hints ?? 0, patterns: game.patterns ?? 0,
+    ...(where ? { book: { id: where.bookId, title: where.title, position: where.position } } : {}),
   });
   // 解いた問題は、ログイン中なら問題リストにも自動で入れる（解いた印と時間つき）
   if (account.loggedIn) keepInLibrary(game.puzzle, 'solved', { seconds: game.elapsed });

@@ -1248,6 +1248,7 @@ body.no-anim .app { transition: none !important; }
 .library-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
 .library-text b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .library-text small { color: var(--ink-faint); font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.library-text small.history-book { color: var(--accent); }
 .library li > button.with-icon { font-size: .78rem; padding: 6px 10px; }
 .library li > .icon-btn { width: 30px; height: 30px; }
 .library-empty { font-size: .8rem; color: var(--ink-faint); }
