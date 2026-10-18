@@ -630,6 +630,14 @@ export class Board {
       return;
     }
     if (this.cursor < 0) return;
+    if ((ev.key === 'r' || ev.key === 'R') && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+      ev.preventDefault();
+      this.cursor = this._turnCursor();
+      this.showCursor = true;
+      this.ensureVisible(this.cursor);
+      this._drawCursor();
+      return;
+    }
     if (ev.key === ' ' || ev.key === 'Enter') {
       ev.preventDefault();
       this.showCursor = true;
@@ -643,6 +651,26 @@ export class Board {
       this.handlers.onPaint(this.cursor, cur === CROSS ? UNKNOWN : CROSS);
       this.handlers.onStrokeEnd();
     }
+  }
+
+  /**
+   * カーソルの辺の向き（横・縦）を切り替える。矢印キーでは同じ向きの辺にしか動かないので、これで向きを変える。
+   * 辺の始まりの点（上の端か左の端）を軸に回し、続けて押すと元の辺に戻る。盤の下の縁・右の縁では、
+   * その点から先に辺が無いので、反対側の辺にする。
+   */
+  _turnCursor() {
+    const g = this.grid;
+    const back = this._turnBack;
+    if (back && back.to === this.cursor) {
+      this._turnBack = null;
+      return back.from;
+    }
+    const { dir, r, c } = g.edgeInfo[this.cursor];
+    const to = dir === 'h'
+      ? g.v(Math.min(r, g.rows - 1), c)
+      : g.h(r, Math.min(c, g.cols - 1));
+    this._turnBack = { from: this.cursor, to };
+    return to;
   }
 
   /** カーソルを方向 [dx, dy] に動かす。最も近い辺を選ぶ。 */
