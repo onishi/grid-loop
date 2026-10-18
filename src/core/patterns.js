@@ -687,15 +687,36 @@ const DEFINITIONS = [
 ];
 
 /**
- * 定石の一覧。定番（popular の順）を先に、そのあとはやさしい順（level の小さい順。同じなら出番の多い順）。
- * last を付けた定石（数手先まで試す・2 つの数字をまとめて調べる、考え方の込み入ったもの）はいちばん後ろ。
+ * 定石の並びのまとまり。定番 → 基本ルール → シンプルな定石 → 複雑な定石 の順に出す。
+ *   定番は popular、基本ルールは「まず覚える」（basic）の分類、複雑な定石は last を付けたもの
+ *   （数手先まで試す・2 つの数字をまとめて調べる、考え方の込み入ったもの）。
+ */
+export const GROUPS = [
+  { id: 'popular', title: '定番', lead: 'よく知られた形です。ほかの定石と結論が重なるものもありますが、ひと目で分かるので先に並べています。' },
+  { id: 'basic', title: '基本ルール', lead: '数字の本数と、交点の線は 0 本か 2 本。まずはこれだけで進めます。' },
+  { id: 'simple', title: 'シンプルな定石', lead: 'やさしい順に並べています。' },
+  { id: 'complex', title: '複雑な定石', lead: '何手か先まで考えたり、2 つの数字をまとめて考えたりするものです。行き詰まったら。' },
+];
+
+/** その定石がどのまとまり（GROUPS の id）に入るか。 */
+export function groupOf(pattern) {
+  if (pattern.popular) return 'popular';
+  if (pattern.last) return 'complex';
+  if (pattern.category === 'basic') return 'basic';
+  return 'simple';
+}
+
+const GROUP_ORDER = new Map(GROUPS.map((g, i) => [g.id, i]));
+
+/**
+ * 定石の一覧。まとまり（GROUPS）の順に、定番は popular の順、ほかはやさしい順（level の小さい順。同じなら出番の多い順）。
  * usage は 1 問を解くあいだにその定石で決められる辺の数の平均で、
  * tools/pattern-stats.js が実測して pattern-stats.js に書き出す。
  */
 export const PATTERNS = DEFINITIONS
   .map((pattern, index) => ({ ...pattern, usage: PATTERN_USAGE[pattern.id] ?? 0, index }))
-  .sort((a, b) => (a.popular ?? Infinity) - (b.popular ?? Infinity)
-    || Number(!!a.last) - Number(!!b.last) || a.level - b.level || b.usage - a.usage || a.index - b.index)
+  .sort((a, b) => GROUP_ORDER.get(groupOf(a)) - GROUP_ORDER.get(groupOf(b))
+    || (a.popular ?? 0) - (b.popular ?? 0) || a.level - b.level || b.usage - a.usage || a.index - b.index)
   .map(({ index, ...pattern }) => pattern);
 
 /**

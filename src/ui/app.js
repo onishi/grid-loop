@@ -869,19 +869,14 @@ function isPatternsOpen() {
   return !el.patPanel.hidden;
 }
 
-/**
- * いま使える定石を、やさしい順（同じやさしさなら出番の多い順）に集める。定番かどうかは問わない。
- * 考え方の込み入った定石（last）は、ほかに使えるものがあればいちばん後ろ。
- */
+/** いま使える定石を、一覧と同じ順（定番 → 基本ルール → シンプルな定石 → 複雑な定石）に集める。 */
 function usablePatterns() {
   const items = [];
   for (const pattern of PATTERNS) {
     const { fills, places } = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
     if (fills.length) items.push({ pattern, fills, places });
   }
-  const order = new Map(PATTERNS.map((p) => [p.id, p.usage]));
-  return items.sort((a, b) => Number(!!a.pattern.last) - Number(!!b.pattern.last)
-    || a.pattern.level - b.pattern.level || order.get(b.pattern.id) - order.get(a.pattern.id));
+  return items;
 }
 
 function showPatterns() {
