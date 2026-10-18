@@ -1093,10 +1093,12 @@ body.no-anim .app { transition: none !important; }
 }
 .pc-actions .mi { font-size: 1.05rem; }
 .pc-actions .pc-apply { flex: 1; min-width: 0; }
-/* 狭い画面では 3 つが横に入りきらないので、「やめる」は × だけにする（見出しの ✕ と同じ働き） */
+.pc-actions .pc-apply-one { flex: .8; }
+/* 狭い画面では 4 つが横に入りきらないので、「やめる」は × だけにし、当てはめる 2 つは文字だけにする */
 @media (max-width: 420px) {
   .pc-actions button { padding: 7px 8px; }
   .pc-close .pc-label { display: none; }
+  .pc-apply .mi { display: none; }
   .pat-panel .hint-badge { display: none; } /* 見出しの定石名に幅を回す */
 }
 @media (max-width: 340px) {

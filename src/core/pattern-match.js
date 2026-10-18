@@ -209,21 +209,24 @@ function placements(variant, rows, cols) {
  * @param {Int8Array} clues 問題の数字（-1 は空白）
  * @param {Int8Array} state いま盤面に引かれている印
  * @param {object} pattern
- * @returns {{fills:{edge:number,value:number}[], conflicts:number, places:number}}
+ * @returns {{fills:{edge:number,value:number}[], conflicts:number, places:number, groups:{edge:number,value:number}[][]}}
+ *   groups は当てはまる場所ごとの決まる印（「1 つだけ当てはめる」で使う）。
  */
 export function findMatches(grid, clues, state, pattern) {
   if (pattern.alt) {
     // 別の形を持つ定石は、どれかの形に合えば当てはまる
     const fills = new Map();
+    const groups = [];
     let conflicts = 0;
     let places = 0;
     for (const form of formsOf(pattern)) {
       const r = findMatches(grid, clues, state, form);
       for (const f of r.fills) fills.set(f.edge, f);
+      groups.push(...r.groups);
       conflicts += r.conflicts;
       places += r.places;
     }
-    return { fills: [...fills.values()], conflicts, places };
+    return { fills: [...fills.values()], conflicts, places, groups };
   }
   if (pattern.match === 'loop') return findLoopMatches(grid, clues, state);
   if (pattern.match === 'vertex') return findVertexMatches(grid, state, 'all');
@@ -243,6 +246,7 @@ export function findMatches(grid, clues, state, pattern) {
   }
 
   const fills = new Map();
+  const groups = [];
   let conflicts = 0;
   let places = 0;
 
@@ -267,10 +271,11 @@ export function findMatches(grid, clues, state, pattern) {
       if (conflicted) conflicts++;
       if (found.length === 0) continue;
       places++;
+      groups.push(found);
       for (const fill of found) fills.set(fill.edge, fill);
     }
   }
-  return { fills: [...fills.values()], conflicts, places };
+  return { fills: [...fills.values()], conflicts, places, groups };
 }
 
 /**
@@ -313,6 +318,7 @@ function matchesHere(grid, clues, state, variant, dr, dc) {
  */
 function findVertexMatches(grid, state, mode) {
   const fills = [];
+  const groups = [];
   let conflicts = 0;
   let places = 0;
 
@@ -337,9 +343,11 @@ function findVertexMatches(grid, state, mode) {
     if (value === UNKNOWN || (mode !== 'all' && mode !== kind)) continue;
 
     places++;
-    for (const e of unknown) fills.push({ edge: e, value });
+    const found = unknown.map((e) => ({ edge: e, value }));
+    groups.push(found);
+    fills.push(...found);
   }
-  return { fills: dedupe(fills), conflicts, places };
+  return { fills: dedupe(fills), conflicts, places, groups };
 }
 
 /**
@@ -350,6 +358,7 @@ function findVertexMatches(grid, state, mode) {
  */
 function findCornerBlockedMatches(grid, clues, state, clue) {
   const fills = new Map();
+  const groups = [];
   let conflicts = 0;
   let places = 0;
   const value = clue === 3 ? LINE : CROSS;
@@ -365,10 +374,12 @@ function findCornerBlockedMatches(grid, clues, state, clue) {
       const open = own.filter((e) => state[e] === UNKNOWN);
       if (!open.length) continue;
       places++;
-      for (const e of open) fills.set(e, { edge: e, value });
+      const found = open.map((e) => ({ edge: e, value }));
+      groups.push(found);
+      for (const f of found) fills.set(f.edge, f);
     }
   }
-  return { fills: [...fills.values()], conflicts, places };
+  return { fills: [...fills.values()], conflicts, places, groups };
 }
 
 /**
@@ -380,10 +391,13 @@ function findCornerBlockedMatches(grid, clues, state, clue) {
  */
 function findLocalMatches(grid, clues, state, pair, only) {
   const fills = new Map();
+  const groups = [];
   let places = 0;
   const take = (cells) => {
     const found = localForced(grid, clues, state, cells);
-    if (found.length) places++;
+    if (!found.length) return;
+    places++;
+    groups.push(found);
     for (const f of found) fills.set(f.edge, f);
   };
   for (let c = 0; c < grid.cellCount; c++) {
@@ -401,7 +415,7 @@ function findLocalMatches(grid, clues, state, pair, only) {
       if (clues[c2] >= 0) take([c, c2]);
     }
   }
-  return { fills: [...fills.values()], conflicts: 0, places };
+  return { fills: [...fills.values()], conflicts: 0, places, groups };
 }
 
 /** マスの集まり cells のまわりで、数字と交点のルールを満たす塗り方を全部調べ、どれでも同じ辺を返す。 */
@@ -468,7 +482,7 @@ const SHORTCUT_STEPS = 12;
  */
 function findShortcutMatches(grid, clues, state) {
   const base = boardState(grid, clues, state);
-  if (!base) return { fills: [], conflicts: 1, places: 0 };
+  if (!base) return { fills: [], conflicts: 1, places: 0, groups: [] };
   const fills = new Map();
   for (let e = 0; e < grid.edgeCount; e++) {
     if (state[e] !== UNKNOWN) continue;
@@ -483,7 +497,7 @@ function findShortcutMatches(grid, clues, state) {
       break;
     }
   }
-  return { fills: [...fills.values()], conflicts: 0, places: fills.size };
+  return { fills: [...fills.values()], conflicts: 0, places: fills.size, groups: [...fills.values()].map((f) => [f]) };
 }
 
 /** 証明が盤面全体を見るルール（輪はひとつだけ・輪の内側と外側）を使っているか。 */
@@ -500,6 +514,7 @@ function usesLoopRule(proof) {
  */
 function findClueMatches(grid, clues, state, full) {
   const fills = [];
+  const groups = [];
   let conflicts = 0;
   let places = 0;
   for (let cell = 0; cell < grid.cellCount; cell++) {
@@ -516,10 +531,12 @@ function findClueMatches(grid, clues, state, full) {
     if (unknown.length === 0) continue;
     if (full ? lines === clue : lines + unknown.length === clue) {
       places++;
-      for (const e of unknown) fills.push({ edge: e, value: full ? CROSS : LINE });
+      const found = unknown.map((e) => ({ edge: e, value: full ? CROSS : LINE }));
+      groups.push(found);
+      fills.push(...found);
     }
   }
-  return { fills, conflicts, places };
+  return { fills, conflicts, places, groups };
 }
 
 /**
@@ -576,7 +593,7 @@ function findBridgeMatches(grid, state) {
       }
     }
   }
-  return { fills, conflicts: 0, places: fills.length };
+  return { fills, conflicts: 0, places: fills.length, groups: fills.map((f) => [f]) };
 }
 
 function dedupe(fills) {
@@ -593,16 +610,16 @@ function findLoopMatches(grid, clues, state) {
   const probe = new SolveState(grid, clues, false);
   for (let e = 0; e < grid.edgeCount; e++) {
     if (state[e] === UNKNOWN) continue;
-    if (!probe.setEdge(e, state[e], 'given')) return { fills: [], conflicts: 1, places: 0 };
+    if (!probe.setEdge(e, state[e], 'given')) return { fills: [], conflicts: 1, places: 0, groups: [] };
   }
   const before = probe.edges.slice();
-  if (!probe.applyLoopRule()) return { fills: [], conflicts: 1, places: 0 };
+  if (!probe.applyLoopRule()) return { fills: [], conflicts: 1, places: 0, groups: [] };
 
   const fills = [];
   for (let e = 0; e < grid.edgeCount; e++) {
     if (before[e] === UNKNOWN && probe.edges[e] === CROSS) fills.push({ edge: e, value: CROSS });
   }
-  return { fills, conflicts: 0, places: fills.length };
+  return { fills, conflicts: 0, places: fills.length, groups: fills.map((f) => [f]) };
 }
 
 /**

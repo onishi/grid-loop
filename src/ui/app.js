@@ -154,7 +154,7 @@ function init() {
     position: el.patPos,
     prev: el.patPrev,
     next: el.patNext,
-    onApply: (item) => applyPattern(item.pattern),
+    onApply: (item, how) => applyPattern(item.pattern, how),
     onReveal: revealPatternCard,
     onClose: () => hidePatterns(),
     onFocus: showPatternTitle,
@@ -942,13 +942,18 @@ const APPLY_PREVIEW_MS = 700;
 let applying = null; // 候補を光らせて、当てはめるのを待っているあいだの { timer }
 
 /**
- * 定石を盤面じゅうに当てはめて、決まる印をまとめて引く。
+ * 定石で決まる印を引く。how が 'one' なら当てはまる場所の 1 つだけ（盤を上の行から読んで最初のところ）、
+ * それ以外は当てはまる場所すべて。
  * どこに当てはめたか分かるように、まず候補（引く印）を光らせ、少し待ってから引く。
  * 動きを減らす設定のときは、待たずに引く。
  */
-function applyPattern(pattern) {
+function applyPattern(pattern, how = 'all') {
   if (game.solved || applying) return;
-  const { fills, conflicts } = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
+  const pick = () => {
+    const found = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
+    return how === 'one' ? { ...found, fills: firstPlace(found.groups) } : found;
+  };
+  const { fills, conflicts } = pick();
   if (fills.length === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
     commitPattern(pattern, fills, conflicts);
     return;
@@ -959,10 +964,27 @@ function applyPattern(pattern) {
     timer: setTimeout(() => {
       applying = null;
       // 待つあいだに盤面が変わっていても、そのときの盤面で当てはめ直す
-      const now = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
+      const now = pick();
       commitPattern(pattern, now.fills, now.conflicts);
     }, APPLY_PREVIEW_MS),
   };
+}
+
+/** 当てはまる場所のうち、盤を上の行から読んで最初に出てくるものの印。まだ決まっていない辺だけ。 */
+function firstPlace(groups) {
+  const at = (edge) => {
+    const { dir, r, c } = game.grid.edgeInfo[edge];
+    return dir === 'h' ? r * 2 * 1000 + c * 2 + 1 : (r * 2 + 1) * 1000 + c * 2;
+  };
+  let best = [];
+  let bestAt = Infinity;
+  for (const group of groups) {
+    const open = group.filter((f) => game.state[f.edge] === UNKNOWN);
+    if (!open.length) continue;
+    const first = Math.min(...open.map((f) => at(f.edge)));
+    if (first < bestAt) { bestAt = first; best = open; }
+  }
+  return best;
 }
 
 /** 候補を光らせるのをやめる（別の問題に移ったときなど）。 */

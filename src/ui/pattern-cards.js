@@ -21,7 +21,7 @@ export class PatternCards {
    * @param {HTMLElement} parts.position 「2 / 6」を出す場所
    * @param {HTMLButtonElement} parts.prev
    * @param {HTMLButtonElement} parts.next
-   * @param {(item:object)=>void} parts.onApply 「当てはめる」を押したとき
+   * @param {(item:object, how:'one'|'all')=>void} parts.onApply 「1 つだけ」「すべて」を押したとき
    * @param {(item:object|null)=>void} parts.onReveal 「候補」で位置を出す（null で消す）
    * @param {()=>void} parts.onClose 「やめる」を押したとき
    * @param {(item:object|null)=>void} parts.onFocus 見ているカードが変わったとき
@@ -137,7 +137,7 @@ export class PatternCards {
     why.addEventListener('click', () => why.classList.toggle('is-open'));
     body.append(figure, why);
 
-    // 候補（位置を見る）・当てはめる・やめる
+    // 候補（位置を見る）・1 つだけ当てはめる・すべて当てはめる・やめる
     const actions = el('div', 'pc-actions');
     const button = (className, iconName, label) => {
       const b = el('button', className);
@@ -150,13 +150,19 @@ export class PatternCards {
     reveal.setAttribute('aria-pressed', 'false');
     reveal.title = '当てはまる位置を盤面に出す';
     reveal.addEventListener('click', () => this._setRevealed(this.revealedId === pattern.id ? null : item));
-    const apply = button('primary pc-apply', 'done_all', `当てはめる（${fills.length} 本）`);
-    apply.addEventListener('click', () => this.onApply(item));
+    const one = button('pc-apply pc-apply-one', 'done', '1 つだけ');
+    one.title = '当てはまる場所の 1 つ（盤を上の行から読んで最初のところ）だけに当てはめる';
+    // 当てはまる場所が 1 つなら「すべて」と同じなので押せなくする
+    one.disabled = places <= 1;
+    one.addEventListener('click', () => this.onApply(item, 'one'));
+    const all = button('primary pc-apply', 'done_all', `すべて（${fills.length} 本）`);
+    all.title = '当てはまる場所すべてに当てはめる';
+    all.addEventListener('click', () => this.onApply(item, 'all'));
     const close = button('pc-close', 'close', 'やめる');
     close.setAttribute('aria-label', 'やめる');
     close.title = 'やめる';
     close.addEventListener('click', () => this.onClose());
-    actions.append(reveal, apply, close);
+    actions.append(reveal, one, all, close);
 
     card.append(body, actions);
     return card;
