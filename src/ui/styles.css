@@ -370,6 +370,7 @@ body.focus-mode .drawer-scrim, body.focus-mode #patterns-drawer { display: none 
 .overlay-card h2 { margin: 0 0 6px; font-size: 1.25rem; }
 .overlay-card p { margin: 4px 0; color: var(--ink-soft); font-size: .9rem; }
 .overlay-card .big { font-size: 1.55rem; font-weight: 700; color: var(--accent); margin: 6px 0; }
+.overlay-card .overlay-help { font-size: .8rem; color: var(--ink-faint); }
 .overlay-card .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
 .overlay-card .next-settings {
   display: grid;

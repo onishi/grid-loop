@@ -1478,7 +1478,11 @@ function showOverlay(isBest) {
   big.textContent = formatTime(game.elapsed);
   const sub = document.createElement('p');
   sub.textContent = `${game.puzzle.rows} × ${game.puzzle.cols} ・ ${diff}`;
-  el.overlayCard.append(h, big, sub);
+  // ヒントを見た回数と、定石を当てはめた回数（解いた履歴と同じ書き方）
+  const help = document.createElement('p');
+  help.className = 'overlay-help';
+  help.textContent = helpNotes({ hints: game.hints ?? 0, patterns: game.patterns ?? 0 }).join('・');
+  el.overlayCard.append(h, big, sub, help);
   // 問題集で遊んでいるなら、問題集の名前と何番か、次の問題へ進むか・メニュー（問題集の問題の一覧）へ戻るか
   const where = shelfInstance?.where();
   if (where) {
