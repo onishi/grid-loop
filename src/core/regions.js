@@ -1,16 +1,16 @@
 /**
  * 線で囲まれた区画。引いた線を壁にして、マスを上下左右のつながりで分ける。
- * 盤の外とつながっていない（外周に、線でない辺で接していない）区画が「閉じた区画」。
- * 輪はひとつだけなので、閉じた区画が 2 つできたら矛盾。設定「線で囲まれた区画に色をつける」で、
- * 閉じた区画だけに色を塗って、それに気づけるようにする。
+ * 盤の外周の辺がどれも決まっている（線か ×）区画は、もう外から線が入る余地がないので「閉じた区画」。
+ * 外周にまだ決まっていない辺が 1 本でも残っていれば「開いた区画」。
+ * 設定「線で囲まれた区画に色をつける」で、閉じた区画だけに色を塗る（閉じた区画を増やしすぎないように気づける）。
  */
 
-import { LINE } from './grid.js';
+import { LINE, UNKNOWN } from './grid.js';
 
 /**
  * マスを区画に分ける。となりのマスとの境目の辺が線でなければ、同じ区画。
  * @returns {{id: Int32Array, count: number, open: Uint8Array}} id はマスごとの区画の番号（0 から count - 1）。
- *   open は区画ごとに、盤の外とつながっている（外周の辺のうち線でないものに接している）なら 1
+ *   open は区画ごとに、外周にまだ決まっていない辺が残っている（外から線が入る余地がある）なら 1
  */
 export function lineRegions(grid, state) {
   const { rows, cols, cellCount } = grid;
@@ -27,9 +27,9 @@ export function lineRegions(grid, state) {
       const cell = stack.pop();
       const r = Math.floor(cell / cols);
       const c = cell % cols;
-      // 盤の外周の辺で、線でないものがあれば、外とつながっている
-      if ((r === 0 && state[grid.h(0, c)] !== LINE) || (r === rows - 1 && state[grid.h(rows, c)] !== LINE)
-        || (c === 0 && state[grid.v(r, 0)] !== LINE) || (c === cols - 1 && state[grid.v(r, cols)] !== LINE)) toOutside = 1;
+      // 盤の外周の辺で、まだ決まっていないものがあれば、開いている
+      if ((r === 0 && state[grid.h(0, c)] === UNKNOWN) || (r === rows - 1 && state[grid.h(rows, c)] === UNKNOWN)
+        || (c === 0 && state[grid.v(r, 0)] === UNKNOWN) || (c === cols - 1 && state[grid.v(r, cols)] === UNKNOWN)) toOutside = 1;
       // 右・左・下・上のとなりと、そのあいだの辺
       const next = [
         [c + 1 < cols, cell + 1, grid.v(r, c + 1)],
@@ -50,7 +50,7 @@ export function lineRegions(grid, state) {
 }
 
 /**
- * 閉じた区画（盤の外とつながっていない区画）にだけ色を割り当てる。外とつながっている区画は塗らない（-1）。
+ * 閉じた区画（外周の辺がどれも線か × で決まっている区画）にだけ色を割り当てる。開いた区画は塗らない（-1）。
  * 前の色をなるべく引き継ぐ：大きい区画から順に、前にいちばん多く塗られていた色をもらう
  * （2 つの区画がつながったら、大きい方の色になる。分かれたら、大きい方が元の色のまま、小さい方に新しい色）。
  * 閉じた区画が無ければ null。
