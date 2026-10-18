@@ -109,7 +109,7 @@ test('縁の定石は、盤の縁に置いても成り立つ', () => {
   }
 });
 
-test('定石は 定番 → 基本ルール → シンプルな定石 → 複雑な定石 の順で、その中はやさしい順（同じなら出番の多い順）に並んでいる', () => {
+test('定石は 基本ルール → 定石（定番） → 定石（基本） → 定石（応用） の順で、その中はやさしい順（同じなら出番の多い順）に並んでいる', () => {
   const rank = new Map(GROUPS.map((g, i) => [g.id, i]));
   for (let i = 1; i < PATTERNS.length; i++) {
     const [a, b] = [PATTERNS[i - 1], PATTERNS[i]];
@@ -122,7 +122,7 @@ test('定石は 定番 → 基本ルール → シンプルな定石 → 複雑�
     }
     assert.ok(a.level < b.level || (a.level === b.level && a.usage >= b.usage), `${b.id} が ${a.id} より前に来るべき`);
   }
-  // 基本ルール・複雑な定石にも 1 つ以上ある
+  // どの段にも 1 つ以上ある
   for (const g of GROUPS) assert.ok(PATTERNS.some((p) => groupOf(p) === g.id), `${g.id} の定石が無い`);
 });
 
