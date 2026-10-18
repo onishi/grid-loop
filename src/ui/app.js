@@ -937,10 +937,45 @@ function updateZoomControls(scale, max) {
   el.focusExit.hidden = !isFocus();
 }
 
-/** 定石を盤面じゅうに当てはめて、決まる印をまとめて引く。 */
+/** 「当てはめる」で、引く前に候補を光らせておく時間（ミリ秒）。 */
+const APPLY_PREVIEW_MS = 700;
+let applying = null; // 候補を光らせて、当てはめるのを待っているあいだの { timer }
+
+/**
+ * 定石を盤面じゅうに当てはめて、決まる印をまとめて引く。
+ * どこに当てはめたか分かるように、まず候補（引く印）を光らせ、少し待ってから引く。
+ * 動きを減らす設定のときは、待たずに引く。
+ */
 function applyPattern(pattern) {
-  if (game.solved) return;
+  if (game.solved || applying) return;
   const { fills, conflicts } = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
+  if (fills.length === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    commitPattern(pattern, fills, conflicts);
+    return;
+  }
+  board.setHints(fills.map((f) => f.edge), null, new Map(fills.map((f) => [f.edge, f.value])));
+  board.ensureVisible(fills[0].edge);
+  applying = {
+    timer: setTimeout(() => {
+      applying = null;
+      // 待つあいだに盤面が変わっていても、そのときの盤面で当てはめ直す
+      const now = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
+      commitPattern(pattern, now.fills, now.conflicts);
+    }, APPLY_PREVIEW_MS),
+  };
+}
+
+/** 候補を光らせるのをやめる（別の問題に移ったときなど）。 */
+function cancelApplying() {
+  if (!applying) return;
+  clearTimeout(applying.timer);
+  applying = null;
+  board.clearHints();
+}
+
+/** 定石で決まる印を、まとめて引く。 */
+function commitPattern(pattern, fills, conflicts) {
+  if (game.solved) return;
 
   if (fills.length === 0) {
     say(conflicts > 0
@@ -1065,6 +1100,7 @@ async function newPuzzle() {
 
 function startPuzzle(puzzle, saved) {
   game.loadSeq = (game.loadSeq ?? 0) + 1;
+  cancelApplying();
   hideHint();
   hidePatterns();
   game.puzzle = puzzle;
