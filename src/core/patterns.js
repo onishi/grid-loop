@@ -648,16 +648,29 @@ const DEFINITIONS = [
     conclude: [['h', 1, 0, 'line']],
     why: '3 の下と右が線なので、残る上と左は片方だけが線です。どちらでも左上の角には線が 1 本だけ来るので、線はその角から外へ出ます。上は × なので左へ。この定石は、3 の 4 つの角で「線が出る」「ふさがる」を考えて決まる辺を、盤面じゅうでまとめて探します。',
   },
+  // となり・斜めの 2 つの数字のまわりの総当たり（match: 'local-2'）。これも 1 つにまとめると分かりにくいので、
+  // 並び方（pair: 'adj' となり合う／'diag' 斜め）で分け、それぞれ分かりやすい形を図と題にしている。
   {
-    id: 'pair-corners',
+    id: 'pair-adjacent',
     origin: 'stage',
-    category: 'numbers', level: 5, match: 'local-2',
-    title: 'となりの数字といっしょに考える',
+    category: 'numbers', level: 5, match: 'local-2', pair: 'adj',
+    title: 'となり合う数字は、境目が線か × かで考える',
     rows: 3, cols: 4, anchor: 'none',
-    clues: [[1, 1, 3], [1, 2, 2]],
-    given: [['v', 2, 3, 'cross'], ['h', 2, 3, 'cross']],
-    conclude: [['v', 1, 1, 'line'], ['h', 2, 1, 'line'], ['h', 2, 0, 'cross'], ['v', 2, 1, 'cross'], ['v', 2, 2, 'cross']],
-    why: 'となりや斜めに並ぶ 2 つの数字は、角の点を分け合っています。2 つのマスの辺と、それぞれの角の点に集まる辺をまとめて、数字の本数と「角の点の線は 0 本か 2 本」を両方満たす引き方を考えると、どの引き方でも同じになる辺が出てきます。図では 2 の右下の角が外からふさがれているので、2 の下と右は両方線か両方 ×。どちらにしても 3 の左と下が線に決まります。1 つずつ見ると決まらないのに、2 つ合わせると決まる、という場面で効きます。この定石は盤面じゅうの、となり・斜めに並ぶ数字の組に当てはめます。',
+    clues: [[1, 1, 1], [1, 2, 3]],
+    given: [['v', 2, 2, 'cross']],
+    conclude: [['h', 2, 2, 'line'], ['h', 1, 1, 'cross'], ['v', 1, 1, 'cross']],
+    why: '1 と 3 の境目の辺で場合分けします。線なら 1 はそれで使い切り。境目の下の点では、下は × で 1 の下にも行けないので、線は 3 の下へ曲がります。× なら 3 は残る上・右・下が全部線です。どちらでも 3 の下は線で、1 の線は境目か下の 1 本なので、1 の上と左は ×。この定石は、となり合う数字の組を盤面じゅうで調べます。',
+  },
+  {
+    id: 'pair-diagonal',
+    origin: 'stage',
+    category: 'numbers', level: 5, match: 'local-2', pair: 'diag',
+    title: '斜めに並ぶ数字は、間の点で線を受けわたす',
+    rows: 4, cols: 4, anchor: 'none',
+    clues: [[1, 1, 2], [2, 2, 3]],
+    given: [['h', 1, 0, 'line']],
+    conclude: [['v', 2, 3, 'line'], ['h', 3, 2, 'line'], ['v', 0, 1, 'cross'], ['h', 3, 3, 'cross'], ['v', 3, 3, 'cross']],
+    why: '2 の左上の角に外から線が来たので、2 の上と左はどちらか 1 本だけが線です。2 は 2 本なので、下と右もどちらか 1 本だけ。すると 2 と 3 の間の点には 2 から線が 1 本だけ来て、3 の上か左のどちらか 1 本へ抜けます。3 は 3 本要るので、残る右と下は線です。この定石は、斜めに並ぶ数字の組を盤面じゅうで調べます。',
   },
   {
     id: 'no-small-loop',
@@ -674,14 +687,14 @@ const DEFINITIONS = [
 ];
 
 /**
- * 定石の一覧。定番（popular の順）を先に、そのあとは出番の多い順（usage の大きい順。同じならやさしい順）。
+ * 定石の一覧。定番（popular の順）を先に、そのあとはやさしい順（level の小さい順。同じなら出番の多い順）。
  * usage は 1 問を解くあいだにその定石で決められる辺の数の平均で、
  * tools/pattern-stats.js が実測して pattern-stats.js に書き出す。
  */
 export const PATTERNS = DEFINITIONS
   .map((pattern, index) => ({ ...pattern, usage: PATTERN_USAGE[pattern.id] ?? 0, index }))
   .sort((a, b) => (a.popular ?? Infinity) - (b.popular ?? Infinity)
-    || b.usage - a.usage || a.level - b.level || a.index - b.index)
+    || a.level - b.level || b.usage - a.usage || a.index - b.index)
   .map(({ index, ...pattern }) => pattern);
 
 /**

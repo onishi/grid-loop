@@ -109,7 +109,7 @@ test('縁の定石は、盤の縁に置いても成り立つ', () => {
   }
 });
 
-test('定石は定番を先に、あとは出番の多い順に並んでいる', () => {
+test('定石は定番を先に、あとはやさしい順（同じなら出番の多い順）に並んでいる', () => {
   for (const p of PATTERNS) {
     assert.ok(typeof p.level === 'number' && p.level >= 1 && p.level <= 5, `${p.id}: level が無い`);
     assert.ok(p.id in PATTERN_USAGE, `${p.id}: 出番の実測値が無い（node tools/pattern-stats.js を走らせる）`);
@@ -124,7 +124,7 @@ test('定石は定番を先に、あとは出番の多い順に並んでいる',
       assert.ok(a.popular && (!b.popular || a.popular < b.popular), `定番の ${b.id} が ${a.id} より前に来るべき`);
       continue;
     }
-    assert.ok(a.usage > b.usage || (a.usage === b.usage && a.level <= b.level), `${b.id} が ${a.id} より前に来るべき`);
+    assert.ok(a.level < b.level || (a.level === b.level && a.usage >= b.usage), `${b.id} が ${a.id} より前に来るべき`);
   }
 });
 

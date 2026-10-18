@@ -34,7 +34,7 @@ const TIERS = [
 ];
 
 /**
- * 定石一覧をまるごと container の中に作る。出番の多さで 3 段に分け、段の中も多い順に並べる。
+ * 定石一覧をまるごと container の中に作る。出番の多さで 3 段に分け、段の中はやさしい順に並べる。
  * @param {HTMLElement} container
  * @param {object} [options]
  * @param {(pattern:object)=>void} [options.onApply] 「当てはめる」を押したときの処理（盤面があるとき）
@@ -151,7 +151,7 @@ function legend(open) {
     list.appendChild(li);
   }
   box.append(list, el('p', 'legend-note',
-    '出番は、1 問を解くあいだにその定石で決められる辺の本数（実測の平均）です。段の中も出番の多い順に並んでいます。'));
+    '出番は、1 問を解くあいだにその定石で決められる辺の本数（実測の平均）です。段の中はやさしい順（同じなら出番の多い順）に並んでいます。'));
   return box;
 }
 
