@@ -629,7 +629,7 @@ const DEFINITIONS = [
   {
     id: 'corners-2',
     origin: 'stage',
-    category: 'incoming', level: 4, match: 'local-1', clue: 2,
+    category: 'incoming', level: 3, match: 'local-1', clue: 2, // 教師データではほぼ毎問使う（68 問中 60 問）
     title: '2 の角がふさがれたら、となりの角から線が出る',
     rows: 3, cols: 3, anchor: 'none',
     clues: [[1, 1, 2]],
@@ -674,7 +674,7 @@ const DEFINITIONS = [
   },
   {
     id: 'no-small-loop',
-    category: 'loop', level: 5,
+    category: 'loop', level: 3, // 考え方はやさしく、教師データではほぼ毎問使う（68 問中 62 問）
     title: '小さな輪を閉じてはいけない',
     rows: 4, cols: 4, anchor: 'none', match: 'loop',
     clues: [[3, 3, 1]],
