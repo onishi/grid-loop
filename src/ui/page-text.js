@@ -118,3 +118,14 @@ export function tidy(text) {
     .join('\n')
     .slice(0, MAX_LENGTH);
 }
+
+/**
+ * 盤のまわりの文字から、問題の番号を読む（「第 12 問」「問題 3」「No. 7」「Q5」、無ければ最初の数）。
+ * 問題集を元の本の順に並べ直すのに使う。読めなければ null。
+ */
+export function metaNumber(meta) {
+  if (!meta) return null;
+  const text = meta.normalize('NFKC');
+  const m = /第\s*(\d+)\s*問/.exec(text) ?? /問題\s*(\d+)/.exec(text) ?? /\b(?:No|Q)\.?\s*(\d+)/i.exec(text) ?? /(\d+)/.exec(text);
+  return m ? Number(m[1]) : null;
+}

@@ -526,6 +526,22 @@ async function admin(request, db, url) {
     return json({ ok: true, added: count - n, skipped: list.length - (count - n) });
   }
 
+  // まとめて並べ替える：{ order: [問題の id, ...] }。問題集の問題を全部、ちょうど 1 回ずつ並べたものだけ受けつける
+  if (parts.length === 3 && method === 'PUT') {
+    const order = (await body(request)).order;
+    const { results } = await db.prepare('SELECT id FROM book_problems WHERE book_id = ?').bind(id).all();
+    const have = new Set(results.map((r) => r.id));
+    if (!Array.isArray(order) || order.length !== have.size || new Set(order).size !== order.length
+      || !order.every((pid) => have.has(pid))) {
+      throw new HttpError(400, '並べ替えの形が違います（問題集の問題を全部、1 回ずつ並べてください）');
+    }
+    await db.batch([
+      ...order.map((pid, i) => db.prepare('UPDATE book_problems SET position = ? WHERE id = ?').bind(i + 1, pid)),
+      db.prepare('UPDATE books SET updated_at = ? WHERE id = ?').bind(now, id),
+    ]);
+    return json({ ok: true });
+  }
+
   const pid = Number(parts[3]);
   if (parts.length !== 4 || !Number.isInteger(pid)) throw new HttpError(404, 'ありません');
   if (method === 'DELETE') {

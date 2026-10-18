@@ -271,6 +271,14 @@ test('問題集を作り、問題をまとめて足し、並べ替え・外し�
   detail = (await call(`/api/admin/books/${id}`, { cookie })).data;
   assert.deepEqual(detail.problems.map((p) => [p.position, p.code]), [[1, '7hCCC'], [2, '5eBBB']]);
 
+  // まとめて並べ替える。全部を 1 回ずつ並べたものだけ受けつける
+  const [x, y] = detail.problems.map((p) => p.id);
+  assert.equal((await call(`/api/admin/books/${id}/problems`, { method: 'PUT', cookie, body: { order: [y] } })).status, 400);
+  assert.equal((await call(`/api/admin/books/${id}/problems`, { method: 'PUT', cookie, body: { order: [y, y] } })).status, 400);
+  assert.equal((await call(`/api/admin/books/${id}/problems`, { method: 'PUT', cookie, body: { order: [y, x] } })).status, 200);
+  detail = (await call(`/api/admin/books/${id}`, { cookie })).data;
+  assert.deepEqual(detail.problems.map((p) => [p.position, p.code]), [[1, '5eBBB'], [2, '7hCCC']]);
+
   await call(`/api/admin/books/${id}`, { method: 'PATCH', cookie, body: { title: '初級編（改）', published: true } });
   let list = (await call('/api/admin/books', { cookie })).data.books;
   assert.equal(list[0].title, '初級編（改）');

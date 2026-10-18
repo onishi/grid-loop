@@ -15,7 +15,7 @@ import { problemStats } from '../core/difficulty-report.js';
 import { decodePuzzle } from '../core/puzzle.js';
 import { unzip } from './zip.js';
 import { pdfPages } from './pdf-pages.js';
-import { readPageText } from './page-text.js';
+import { readPageText, metaNumber } from './page-text.js';
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|avif|heic)$/i;
 
@@ -93,6 +93,8 @@ function renderProblems() {
   const list = $('problems');
   list.textContent = '';
   $('problem-count').textContent = `${current.problems.length} 問`;
+  // 取り込んだときに読んだ盤のまわりの文字に番号があれば、元の本の順に並べ直せる
+  $('sort-by-meta').hidden = current.problems.filter((p) => metaNumber(p.meta) != null).length < 2;
   if (!current.problems.length) {
     list.append(el('li', 'admin-empty', 'まだありません。上から画像・zip・PDF を落として足してください。'));
     return;
@@ -179,6 +181,20 @@ function iconButton(name, label, run) {
   b.append(icon(name));
   b.addEventListener('click', run);
   return b;
+}
+
+/**
+ * 盤のまわりの文字の番号（「第 12 問」など）の順に並べ直す。番号の読めない問題は、いまの順のまま後ろへ。
+ */
+async function sortByMeta() {
+  const keyed = current.problems.map((p, i) => ({ p, i, n: metaNumber(p.meta) }));
+  const sorted = [...keyed].sort((a, b) => (a.n ?? Infinity) - (b.n ?? Infinity) || a.i - b.i);
+  if (sorted.every((x, i) => x.i === i)) { alert('もう番号順に並んでいます。'); return; }
+  const missing = keyed.filter((x) => x.n == null).length;
+  const note = missing ? `（番号の読めない ${missing} 問は、いまの順のまま後ろに置きます）` : '';
+  if (!confirm(`盤のまわりの文字の番号順に並べ直します${note}。よろしいですか？`)) return;
+  await api(`/api/admin/books/${current.book.id}/problems`, { method: 'PUT', body: { order: sorted.map((x) => x.p.id) } });
+  await openBook(current.book.id);
 }
 
 async function moveProblem(p, move) {
@@ -597,6 +613,7 @@ function bindImport() {
 }
 
 $('problems').before(metricGuide());
+$('sort-by-meta').addEventListener('click', () => sortByMeta().catch((err) => alert(err.message || '並べ替えられませんでした')));
 bindBooks();
 bindImport();
 bindGenerate();

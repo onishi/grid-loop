@@ -10,6 +10,8 @@ import { decodePuzzle } from '../core/puzzle.js';
 import { teacherCheck } from '../core/teacher.js';
 
 const FILTERS = [['f-kind', 'kind'], ['f-size', 'size'], ['f-level', 'level'], ['f-teacher', 'teacher']];
+/** 文字で探す（問題集名・ファイル名・盤のまわりの文字）。URL では q= で残す。 */
+const textOf = (r) => `${r.bookTitle}\n${r.source ?? ''}\n${r.meta ?? ''}`.normalize('NFKC').toLowerCase();
 /** 問題集の絞り込みは複数選べる。選んだ問題集の id（空ならすべて）。URL では book=1,3 のように残す。 */
 let books = new Set();
 
@@ -132,6 +134,7 @@ function readUrl() {
   const known = new Set(allRows.map((r) => String(r.bookId)));
   books = new Set((q.get('book') ?? '').split(',').filter((v) => known.has(v)));
   syncBooks();
+  $('f-text').value = q.get('q') ?? '';
   for (const [id, key] of FILTERS) {
     const v = q.get(key) ?? '';
     const sel = $(id);
@@ -145,6 +148,7 @@ function readUrl() {
 function writeUrl() {
   const q = new URLSearchParams();
   if (books.size) q.set('book', [...books].join(','));
+  if ($('f-text').value.trim()) q.set('q', $('f-text').value.trim());
   for (const [id, key] of FILTERS) if ($(id).value) q.set(key, $(id).value);
   if (sortKey !== 'bookTitle') q.set('sort', sortKey);
   if (sortDir < 0) q.set('dir', 'desc');
@@ -155,7 +159,10 @@ function writeUrl() {
 
 function filteredRows() {
   const [kind, size, level, teacher] = FILTERS.map(([id]) => $(id).value);
+  // 空白で区切った言葉が、全部含まれるもの
+  const words = $('f-text').value.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
   return allRows.filter((r) => (!books.size || books.has(String(r.bookId)))
+    && (!words.length || words.every((w) => textOf(r).includes(w)))
     && (!kind || kindOf(r) === kind) && (!size || r.size === size) && (!level || r.difficulty === level)
     && (!teacher || (teacher === 'yes' ? r.teacher.ok === true : r.teacher.ok === false)));
 }
@@ -245,6 +252,7 @@ function render() {
 }
 
 for (const [id] of FILTERS) $(id).addEventListener('change', render);
+$('f-text').addEventListener('input', render);
 // 問題集の絞り込みは、外を押すか Esc で閉じる
 document.addEventListener('click', (ev) => { if (!$('f-book').contains(ev.target)) $('f-book').open = false; });
 $('f-book').addEventListener('keydown', (ev) => {
