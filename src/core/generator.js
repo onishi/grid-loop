@@ -71,10 +71,11 @@ export const GENERATORS = {
   'teacher-6': { label: '教師データ v6', options: { style: 'teacher', version: 6 } },
   'teacher-7': { label: '教師データ v7', options: { style: 'teacher', version: 7 } },
   'teacher-8': { label: '教師データ v8', options: { style: 'teacher', version: 8 } },
+  'teacher-9': { label: '教師データ v9', options: { style: 'teacher', version: 9 } },
 };
 // 最初に選ばれる作り方（管理画面の「ランダムに作る」と、ゲームの「作る」）。7 版は遊び比べで、数字・入り口・作業の続く区間・
 // 山場の位置のどれも 5 版より教師データに近かった。8 版はそのふつうを軽くして、考える手の多さも教師データ並みにした
-export const LATEST_GENERATOR = 'teacher-8';
+export const LATEST_GENERATOR = 'teacher-9';
 
 /**
  * ゲームの「作る」で使う作り方の options。入門・やさしい・ふつうは最初に選ばれる作り方（教師データ）で作る。
@@ -108,6 +109,13 @@ const FEEL_MIN_MID = 0.55;
  * 教師データの 24×14 は中央値 19 手・平均 22 手、3 版は中央値 29 手だった。
  */
 const FEEL_MAX_RUN = 22;
+/**
+ * 9 版の、考える手のない区間（feelProfile の quietGap）の上限。教師データの 24×14 ふつうは中央値 0.26、
+ * 8 版は 0.31（序盤の作業が長く、最初に考えさせられるのが遅い）。
+ */
+const FEEL_MAX_GAP = 0.27;
+/** 9 版の考える手の上限。ふつうを 10.3 に（序盤から考えさせると考える手が増えるので、教師データの 10.1 に寄せる）。 */
+const FEEL_MAX_RATE_V9 = { ...FEEL_MAX_RATE_V6, normal: 10.3 };
 
 /**
  * 1 本の輪をランダムに作る。
@@ -240,7 +248,7 @@ export function generatePuzzle(options = {}) {
   const deadline = options.deadline ?? (Date.now() + (options.timeLimitMs ?? 20000));
   const teacher = options.style === 'teacher';
   // 教師データ 2 版の工夫（数字をむらなく・3 を残す・入門にも考える手）。1 版はそれ無しで作る
-  const version = options.version ?? 8; // 省くと、最初に選ばれる作り方（LATEST_GENERATOR）と同じ版
+  const version = options.version ?? 9; // 省くと、最初に選ばれる作り方（LATEST_GENERATOR）と同じ版
   const v2 = teacher && version >= 2;
   // 3 版：数字の内訳を教師データに寄せ、手触り（考える手の多さ・入り口・山場）を合わせる
   const v3 = teacher && version >= 3;
@@ -254,7 +262,10 @@ export function generatePuzzle(options = {}) {
   const v7 = teacher && version >= 7;
   // 8 版：7 版のふつうを軽く（考える手の上限を 12 から 11 に。遊び比べで 7 版のふつうは 12.0、教師データは 10.7）
   const v8 = teacher && version >= 8;
-  const rateRange = (level) => (v4 ? FEEL_RATE_V4[level] : [0, (v6 || v8 ? FEEL_MAX_RATE_V6 : FEEL_MAX_RATE)[level]]);
+  // 9 版：序盤から考えさせる。数字を戻すのは後半に考えさせられた場所の近くだけにし（序盤の考える手を残す）、
+  //   考える手のない区間が長いものは選ばない（8 版は教師データより最初に考えさせられるのが遅く、数字も 7 ポイント多い）
+  const v9 = teacher && version >= 9;
+  const rateRange = (level) => (v4 ? FEEL_RATE_V4[level] : [0, (v9 ? FEEL_MAX_RATE_V9 : v6 || v8 ? FEEL_MAX_RATE_V6 : FEEL_MAX_RATE)[level]]);
   let best = null; // 時間切れのときに返す、狙いにいちばん近いもの
   let bestScore = Infinity;
   // 教師データの入門・やさしいは数字が多めになるので、少しのあいだ作り直して数字のいちばん少ないものを選ぶ
@@ -379,7 +390,7 @@ export function generatePuzzle(options = {}) {
     // 3 版の仕上げ：考える手が多すぎれば（休む間がない・入り口が狭い）、難易度を変えない範囲で数字を戻す
     let feel = null;
     if (v3) {
-      const eased = easeFeel(grid, finalClues, full, removedOrder, solution, rateRange(LEVELS[got])[1], v6 ? 'both' : v4 ? 'think' : v5 ? 'value' : null,
+      const eased = easeFeel(grid, finalClues, full, removedOrder, solution, rateRange(LEVELS[got])[1], v9 ? 'late' : v6 ? 'both' : v4 ? 'think' : v5 ? 'value' : null,
         (c) => levelAt(c) === got && (got < LEVELS.indexOf('normal') || countOf(c) < grid.cellCount * 0.5), deadline);
       finalClues = eased.clues;
       feel = eased.feel;
@@ -406,6 +417,9 @@ export function generatePuzzle(options = {}) {
     }
     // 3 版は手触り（考える手の多さ・入り口・山場）も見る。合わなければ少しのあいだ作り直して、近いものを選ぶ
     let feelMiss = v3 ? feelGap(feel, rateRange(LEVELS[got])) : 0;
+    // 9 版：考える手のない区間が長い（序盤の作業が長い）ものは、近いものを探し続ける。
+    //   小さな盤は考える手が少なく、教師データでも区間が長い（10×10 は手数の 4 割ほど）ので、200 マス以上の盤だけ
+    if (v9 && feel && rows * cols >= 200) feelMiss += Math.max(0, feel.quietGap - FEEL_MAX_GAP) * 20;
     // 5 版：ほかの目安が合うものだけ、作業の続く区間も見る（重いので打ち切りつき）
     if (v5 && got === rank && !missed && feelMiss === 0) {
       const run = workRun({ rows, cols, clues: finalClues, solution }, FEEL_MAX_RUN * 2);
@@ -445,15 +459,15 @@ function feelGap(feel, range) {
 /**
  * 考える手が多すぎるとき、最後に削った組から順に数字を戻す（ok を保てるものだけ）。
  * order が 'think' なら考えさせられた場所の近くから（4 版）、'value' なら 3・2 の組から（5 版）、
- * 'both' なら考えさせられた場所の近くの 3・2 から（6 版）戻す。
+ * 'both' なら考えさせられた場所の近くの 3・2 から（6 版）、'late' なら後半に考えさせられた場所の近くの 3・2 から（9 版）戻す。
  * 数字が 6 割以上並ぶ行・列には戻さない（むらを作らない）。
  * 手触りを測るのは重い（24×14 で 1 秒ほど）ので、何組かずつまとめて戻しては測る。
  * 1 組あたりで考える手がどれだけ減ったかから、目安に届くのに要る組の数を見積もり、戻しすぎないようにする。
  * @returns {{clues: Int8Array, feel: object}}
  */
 function easeFeel(grid, clues, full, removedOrder, solution, max, order, ok, deadline) {
-  const nearThink = order === 'think' || order === 'both';
-  const byValue = order === 'value' || order === 'both';
+  const nearThink = order === 'think' || order === 'both' || order === 'late';
+  const byValue = order === 'value' || order === 'both' || order === 'late';
   // 数字の「戻したい度合い」：3・2 は線を引く手が出る。0 は × を付けるだけなので最後
   //   6 版は、まわりに 0 の無い 0 は 1 と同じに扱う（離れた 0 は入り口になる）
   const worth = (g) => g.reduce((a, x) => a + (full[x] === 0 && order === 'both' && !zerosNear(grid, out, x) ? 0 : [-3, 0, 1, 2][full[x]]), 0);
@@ -473,7 +487,9 @@ function easeFeel(grid, clues, full, removedOrder, solution, max, order, ok, dea
   // 4 版：考えさせられた辺のまわりの数字から戻す（その場所の詰まりをほどく数字なので、少ない数字で済む）
   const byThink = () => {
     const near = new Map();
-    for (const e of feel.thinkEdges ?? []) {
+    // 9 版は後半（半分より後）に考えさせられた場所だけ。序盤の考える手は残したい
+    const edges = (feel.thinkEdges ?? []).filter((e, j) => order !== 'late' || (feel.thinkAt?.[j] ?? 1) >= 0.5);
+    for (const e of edges) {
       for (const cell of grid.edgeCells[e]) {
         const r = Math.floor(cell / cols);
         const c = cell % cols;
@@ -486,7 +502,7 @@ function easeFeel(grid, clues, full, removedOrder, solution, max, order, ok, dea
         }
       }
     }
-    const score = (g) => g.reduce((a, x) => a + (near.get(x) ?? 0), 0) + (order === 'both' ? worth(g) : 0);
+    const score = (g) => g.reduce((a, x) => a + (near.get(x) ?? 0), 0) + (order === 'both' || order === 'late' ? worth(g) : 0);
     back = back.slice(i).sort((a, b) => score(b) - score(a));
     i = 0;
   };

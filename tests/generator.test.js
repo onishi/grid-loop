@@ -153,14 +153,15 @@ test('教師データ v3：手触り（考える手の多さ・入り口・山�
   assert.ok(h[3] > 0 && h[1] > 0);
 });
 
-test('作問ロジックの版：教師データ v8 が最新で、版を省くと最新で作る', () => {
-  assert.equal(LATEST_GENERATOR, 'teacher-8');
+test('作問ロジックの版：教師データ v9 が最新で、版を省くと最新で作る', () => {
+  assert.equal(LATEST_GENERATOR, 'teacher-9');
   assert.deepEqual(GENERATORS['teacher-3'].options, { style: 'teacher', version: 3 });
   assert.deepEqual(GENERATORS['teacher-4'].options, { style: 'teacher', version: 4 });
   assert.deepEqual(GENERATORS['teacher-5'].options, { style: 'teacher', version: 5 });
   assert.deepEqual(GENERATORS['teacher-6'].options, { style: 'teacher', version: 6 });
   assert.deepEqual(GENERATORS['teacher-7'].options, { style: 'teacher', version: 7 });
   assert.deepEqual(GENERATORS['teacher-8'].options, { style: 'teacher', version: 8 });
+  assert.deepEqual(GENERATORS['teacher-9'].options, { style: 'teacher', version: 9 });
 });
 
 test('教師データ v5：0 を固めずに置く（まわり 2 歩以内にほかの 0 がある 0 を残さない）', () => {
@@ -188,9 +189,9 @@ test('教師データ v6：ふつうは考える手を 100 本あたり 11 回�
   assert.ok(feelProfile(p).thinkRate <= 11 + 1e-9, `考える手 ${feelProfile(p).thinkRate}`);
 });
 
-test('ゲームの「作る」は入門〜ふつうが教師データ 8 版。むずかしい・鬼はランダム', () => {
-  assert.deepEqual(gameGeneratorOptions(7, 7, 'normal'), { style: 'teacher', version: 8 });
-  assert.deepEqual(gameGeneratorOptions(5, 5, 'intro'), { style: 'teacher', version: 8 });
+test('ゲームの「作る」は入門〜ふつうが教師データ 9 版。むずかしい・鬼はランダム', () => {
+  assert.deepEqual(gameGeneratorOptions(7, 7, 'normal'), { style: 'teacher', version: 9 });
+  assert.deepEqual(gameGeneratorOptions(5, 5, 'intro'), { style: 'teacher', version: 9 });
   assert.deepEqual(gameGeneratorOptions(15, 15, 'hard'), {});
   assert.deepEqual(gameGeneratorOptions(10, 10, 'expert'), {});
 });
