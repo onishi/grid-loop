@@ -21,11 +21,11 @@ const el = (tag, className, text) => {
   return node;
 };
 
-/** 段に分ける。定番 → 基本ルール → シンプルな定石 → 複雑な定石（patterns.js の GROUPS）。 */
+/** 段に分ける。基本ルール → 定石（定番） → 定石（基本） → 定石（応用）（patterns.js の GROUPS）。 */
 const TIERS = GROUPS.map((g) => ({ ...g, test: (p) => groupOf(p) === g.id }));
 
 /**
- * 定石一覧をまるごと container の中に作る。定番・基本ルール・シンプルな定石・複雑な定石の段に分け、段の中はやさしい順に並べる。
+ * 定石一覧をまるごと container の中に作る。基本ルール・定石（定番）・定石（基本）・定石（応用）の段に分け、段の中はやさしい順に並べる。
  * @param {HTMLElement} container
  * @param {object} [options]
  * @param {(pattern:object)=>void} [options.onApply] 「当てはめる」を押したときの処理（盤面があるとき）

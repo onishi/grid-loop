@@ -154,8 +154,10 @@ function init() {
     position: el.patPos,
     prev: el.patPrev,
     next: el.patNext,
-    onApply: (item) => applyPattern(item.pattern),
+    onApply: (item, how) => applyPattern(item.pattern, how),
     onReveal: revealPatternCard,
+    revealOn: prefs.patternReveal === true,
+    onRevealToggle: () => savePrefs(),
     onClose: () => hidePatterns(),
     onFocus: showPatternTitle,
     emptyActions: [
@@ -869,7 +871,7 @@ function isPatternsOpen() {
   return !el.patPanel.hidden;
 }
 
-/** いま使える定石を、一覧と同じ順（定番 → 基本ルール → シンプルな定石 → 複雑な定石）に集める。 */
+/** いま使える定石を、一覧と同じ順（基本ルール → 定石（定番） → 定石（基本） → 定石（応用））に集める。 */
 function usablePatterns() {
   const items = [];
   for (const pattern of PATTERNS) {
@@ -917,11 +919,11 @@ function showPatternTitle(item) {
   h2.replaceChildren(title, count);
 }
 
-/** 「候補」を押したカードの定石が当てはまる位置と、そこに入る線か × かを光らせる。 */
-function revealPatternCard(item) {
+/** 「候補」がオンのとき、見ているカードの定石が当てはまる位置と、そこに入る線か × かを光らせる。 */
+function revealPatternCard(item, scroll = true) {
   if (!item) { board.clearHints(); return; }
   board.setHints(item.fills.map((f) => f.edge), null, new Map(item.fills.map((f) => [f.edge, f.value])));
-  board.ensureVisible(item.fills[0].edge);
+  if (scroll) board.ensureVisible(item.fills[0].edge);
 }
 
 /** 拡大・縮小のボタンを、いまの倍率に合わせる。拡大できない小さな盤では出さない。 */
@@ -937,10 +939,67 @@ function updateZoomControls(scale, max) {
   el.focusExit.hidden = !isFocus();
 }
 
-/** 定石を盤面じゅうに当てはめて、決まる印をまとめて引く。 */
-function applyPattern(pattern) {
+/** 「当てはめる」で、引く前に候補を光らせておく時間（ミリ秒）。 */
+const APPLY_PREVIEW_MS = 700;
+let applying = null; // 候補を光らせて、当てはめるのを待っているあいだの { timer }
+
+/**
+ * 定石で決まる印を引く。how が 'one' なら当てはまる場所の 1 つだけ（盤を上の行から読んで最初のところ）、
+ * それ以外は当てはまる場所すべて。
+ * どこに当てはめたか分かるように、まず候補（引く印）を光らせ、少し待ってから引く。
+ * 動きを減らす設定のときは、待たずに引く。
+ */
+function applyPattern(pattern, how = 'all') {
+  if (game.solved || applying) return;
+  const pick = () => {
+    const found = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
+    return how === 'one' ? { ...found, fills: firstPlace(found.groups) } : found;
+  };
+  const { fills, conflicts } = pick();
+  if (fills.length === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    commitPattern(pattern, fills, conflicts);
+    return;
+  }
+  board.setHints(fills.map((f) => f.edge), null, new Map(fills.map((f) => [f.edge, f.value])));
+  board.ensureVisible(fills[0].edge);
+  applying = {
+    timer: setTimeout(() => {
+      applying = null;
+      // 待つあいだに盤面が変わっていても、そのときの盤面で当てはめ直す
+      const now = pick();
+      commitPattern(pattern, now.fills, now.conflicts);
+    }, APPLY_PREVIEW_MS),
+  };
+}
+
+/** 当てはまる場所のうち、盤を上の行から読んで最初に出てくるものの印。まだ決まっていない辺だけ。 */
+function firstPlace(groups) {
+  const at = (edge) => {
+    const { dir, r, c } = game.grid.edgeInfo[edge];
+    return dir === 'h' ? r * 2 * 1000 + c * 2 + 1 : (r * 2 + 1) * 1000 + c * 2;
+  };
+  let best = [];
+  let bestAt = Infinity;
+  for (const group of groups) {
+    const open = group.filter((f) => game.state[f.edge] === UNKNOWN);
+    if (!open.length) continue;
+    const first = Math.min(...open.map((f) => at(f.edge)));
+    if (first < bestAt) { bestAt = first; best = open; }
+  }
+  return best;
+}
+
+/** 候補を光らせるのをやめる（別の問題に移ったときなど）。 */
+function cancelApplying() {
+  if (!applying) return;
+  clearTimeout(applying.timer);
+  applying = null;
+  board.clearHints();
+}
+
+/** 定石で決まる印を、まとめて引く。 */
+function commitPattern(pattern, fills, conflicts) {
   if (game.solved) return;
-  const { fills, conflicts } = findMatches(game.grid, game.puzzle.clues, game.state, pattern);
 
   if (fills.length === 0) {
     say(conflicts > 0
@@ -1010,6 +1069,7 @@ function savePrefs() {
     inputMode: board ? board.inputMode : 'line',
     drawer: isDrawerOpen(),
     patternsOnlyUsable,
+    patternReveal: cards ? cards.revealOn : false,
     theme: document.documentElement.dataset.theme || '',
   });
 }
@@ -1065,6 +1125,7 @@ async function newPuzzle() {
 
 function startPuzzle(puzzle, saved) {
   game.loadSeq = (game.loadSeq ?? 0) + 1;
+  cancelApplying();
   hideHint();
   hidePatterns();
   game.puzzle = puzzle;

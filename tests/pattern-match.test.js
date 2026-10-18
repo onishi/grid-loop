@@ -595,3 +595,21 @@ test('空白のない盤面では当てはまる場所が無くなる', () => {
     assert.equal(fills.length, 0, `${pattern.id}: 完成後なのに埋める場所を返した`);
   }
 });
+
+test('当てはまる場所ごとの印（groups）は、場所の数と同じだけあり、合わせると決まる印すべてになる', () => {
+  for (const seed of [11, 12]) {
+    const p = generatePuzzle({ rows: 7, cols: 7, difficulty: 'normal', seed });
+    const grid = getGrid(7, 7);
+    const sol = solutionFor(p);
+    const state = new Int8Array(grid.edgeCount);
+    // 正解の 3 割ほどを置いた盤面で調べる（いろいろな定石が当てはまるように）
+    for (let e = 0; e < grid.edgeCount; e += 3) state[e] = sol[e];
+    for (const pattern of PATTERNS) {
+      const r = findMatches(grid, p.clues, state, pattern);
+      assert.equal(r.groups.length, r.places, `${pattern.id}: 場所の数と groups の数が違う`);
+      const union = new Map(r.groups.flat().map((f) => [f.edge, f.value]));
+      assert.deepEqual([...union.keys()].sort((a, b) => a - b), [...new Set(r.fills.map((f) => f.edge))].sort((a, b) => a - b), `${pattern.id}: groups を合わせても fills にならない`);
+      for (const f of r.fills) assert.equal(union.get(f.edge), f.value, `${pattern.id}: groups と fills で値が違う`);
+    }
+  }
+});
