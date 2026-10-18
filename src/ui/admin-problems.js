@@ -4,7 +4,7 @@
  * 絞り込みと並べ替えは URL に残す（詳細から戻ったとき、同じ表に戻れるように）。
  */
 
-import { $, el, icon, api, startAdmin, metricGuide, METRIC_HELP, kindOf, kindLabel, KIND_LABEL, LEVEL_ORDER } from './admin-common.js';
+import { $, el, icon, api, startAdmin, adminNav, setCrumbs, metricGuide, METRIC_HELP, kindOf, kindLabel, KIND_LABEL, LEVEL_ORDER } from './admin-common.js';
 import { DIFFICULTIES } from '../core/generator.js';
 import { decodePuzzle } from '../core/puzzle.js';
 import { teacherCheck } from '../core/teacher.js';
@@ -206,4 +206,6 @@ function render() {
 
 for (const [id] of FILTERS) $(id).addEventListener('change', render);
 $('f-count').before(metricGuide());
+adminNav('problems');
+setCrumbs([{ label: '問題一覧' }]);
 startAdmin(() => load().catch((err) => { $('f-count').textContent = err.message || '読み込めませんでした'; }));

@@ -6,6 +6,7 @@ import { Board } from './board.js';
 import { renderPatternsInto } from './patterns-view.js';
 import { findMatches } from '../core/pattern-match.js';
 import { PATTERNS } from '../core/patterns.js';
+import { loadPatternSettings } from './pattern-settings.js';
 import { PuzzleService } from './puzzle-service.js';
 import { PatternCards } from './pattern-cards.js';
 import { PhotoImport } from './photo-import.js';
@@ -436,6 +437,16 @@ function bindUI() {
   });
 
   setInterval(tickTimer, 1000);
+
+  // 管理画面で決めた定石の並べ方。読み込んで変わっていたら、一覧とカードを並べ直す
+  loadPatternSettings(() => {
+    if (patternsView) {
+      el.drawerBody.textContent = '';
+      patternsView = null;
+      if (drawerOpen) buildPatternsView();
+    }
+    if (isPatternsOpen()) refreshPatternCards();
+  });
 }
 
 /* ---------------- 設定とその他（めったに使わないもの） ---------------- */
@@ -799,18 +810,22 @@ function isDrawerOpen() {
   return drawerOpen;
 }
 
+/** サイドバーの定石一覧を作る。 */
+function buildPatternsView() {
+  patternsView = renderPatternsInto(el.drawerBody, {
+    onApply: applyPattern,
+    onlyUsable: patternsOnlyUsable,
+    onFilterChange: (on) => { patternsOnlyUsable = on; savePrefs(); },
+  });
+  updatePatternCounts();
+}
+
 function openDrawer({ instant = false } = {}) {
   if (drawerOpen) return;
   drawerOpen = true;
-  if (!patternsView) {
-    // 図の数が多いので、初めて開いたときにだけ作る
-    patternsView = renderPatternsInto(el.drawerBody, {
-      onApply: applyPattern,
-      onlyUsable: patternsOnlyUsable,
-      onFilterChange: (on) => { patternsOnlyUsable = on; savePrefs(); },
-    });
-  }
-  updatePatternCounts();
+  // 図の数が多いので、初めて開いたときにだけ作る
+  if (!patternsView) buildPatternsView();
+  else updatePatternCounts();
   el.drawer.hidden = false;
   el.drawerScrim.hidden = false;
   document.body.classList.add('drawer-open');
@@ -871,7 +886,7 @@ function isPatternsOpen() {
   return !el.patPanel.hidden;
 }
 
-/** いま使える定石を、一覧と同じ順（基本ルール → 定石（定番） → 定石（基本） → 定石（応用））に集める。 */
+/** いま使える定石を、一覧と同じ順（基本ルール → 定石（定番） → 定石（基本） → 定石（応用） → 定石（発展））に集める。 */
 function usablePatterns() {
   const items = [];
   for (const pattern of PATTERNS) {

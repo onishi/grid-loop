@@ -1,6 +1,7 @@
 /**
- * 管理画面のページ（問題集・問題一覧・問題の詳細）で共通に使うもの。
- * ログインと管理者の確かめ、画面部品の小道具、問題を確かめる裏のワーカー、盤の絵。
+ * 管理画面のページ（問題集・くらべる・問題一覧・問題の詳細・定石）で共通に使うもの。
+ * ログインと管理者の確かめ、ページを行き来するメニューとパンくずリスト、画面部品の小道具、
+ * 問題を確かめる裏のワーカー、盤の絵。
  */
 
 import { account, api } from './account.js';
@@ -22,6 +23,68 @@ export const icon = (name) => {
   s.setAttribute('aria-hidden', 'true');
   return s;
 };
+
+/* ---------------- ページを行き来するメニューとパンくずリスト ---------------- */
+
+/** 管理画面のページの URL。どの階層のページから呼んでも同じところを指すように、このファイルの場所から作る。 */
+export const adminUrl = (path) => new URL(`../../${path}`, import.meta.url).href;
+
+/** 上のメニューに並べるページ。key は adminNav に渡す名前。 */
+const ADMIN_PAGES = [
+  { key: 'books', label: '問題集', icon: 'menu_book', path: 'admin.html' },
+  { key: 'compare', label: 'くらべる', icon: 'compare_arrows', path: 'admin.html?view=compare' },
+  { key: 'problems', label: '問題一覧', icon: 'table_rows', path: 'admin/problems.html' },
+  { key: 'patterns', label: '定石', icon: 'extension', path: 'admin/patterns.html' },
+];
+
+/**
+ * 上のメニュー（#admin-tabs）を作り、いまのページ（key）に印を付ける。
+ * 問題の詳細は「問題一覧」の下のページなので、problems を渡す。
+ */
+export function adminNav(key) {
+  const nav = $('admin-tabs');
+  if (!nav) return;
+  nav.textContent = '';
+  for (const page of ADMIN_PAGES) {
+    const a = el('a', 'admin-tab');
+    a.href = adminUrl(page.path);
+    a.append(icon(page.icon), el('span', null, page.label));
+    if (page.key === key) a.setAttribute('aria-current', 'page');
+    nav.append(a);
+  }
+  const game = el('a', 'admin-tab admin-tab-game');
+  game.href = adminUrl('');
+  game.append(icon('sports_esports'), el('span', null, 'ゲームへ'));
+  nav.append(game);
+}
+
+/**
+ * パンくずリスト（#admin-crumbs）を出し、ページの題も合わせる。先頭の「管理」は付けなくてよい。
+ * @param {Array<{label:string, href?:string}>} items 上の階層から順に。最後がいまのページ
+ * @param {string} [title] ページの題（省けば最後の項目の名前）
+ */
+export function setCrumbs(items, title) {
+  const nav = $('admin-crumbs');
+  if (!nav) return;
+  const all = [{ label: '管理', href: adminUrl('admin.html') }, ...items];
+  const list = el('ol');
+  all.forEach((item, i) => {
+    const li = el('li');
+    const last = i === all.length - 1;
+    if (item.href && !last) {
+      const a = el('a', null, item.label);
+      a.href = item.href;
+      li.append(a);
+    } else {
+      const span = el('span', null, item.label);
+      if (last) span.setAttribute('aria-current', 'page');
+      li.append(span);
+    }
+    list.append(li);
+  });
+  nav.replaceChildren(list);
+  document.title = `${title ?? all.at(-1).label} - Grid Loop 管理`;
+}
 
 export const LEVEL_ORDER = ['intro', 'easy', 'normal', 'hard', 'expert'];
 

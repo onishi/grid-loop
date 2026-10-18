@@ -1,6 +1,7 @@
 /** 定石一覧の単独ページ。中身は patterns-view.js と共通。 */
 
 import { renderPatternsInto } from './patterns-view.js';
+import { loadPatternSettings } from './pattern-settings.js';
 
 const PREFS_KEY = 'gridloop:prefs';
 
@@ -22,5 +23,9 @@ document.getElementById('btn-theme').addEventListener('click', () => {
   try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* 無視 */ }
 });
 
-// 単独ページには盤面が無いので、当てはめボタンは出さない
-renderPatternsInto(document.getElementById('patterns'));
+// 単独ページには盤面が無いので、当てはめボタンは出さない。
+// 管理画面で決めた並べ方を当て、サーバーから読んで変わっていたら作り直す
+const box = document.getElementById('patterns');
+const render = () => { box.textContent = ''; renderPatternsInto(box); };
+loadPatternSettings(render);
+render();

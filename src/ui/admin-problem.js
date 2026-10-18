@@ -4,7 +4,7 @@
  * 目安が欠けていれば、調べた結果で埋めて保存する。
  */
 
-import { $, el, api, startAdmin, checker, boardSvg, metricGuide, kindLabel } from './admin-common.js';
+import { $, el, api, startAdmin, adminNav, adminUrl, setCrumbs, checker, boardSvg, metricGuide, kindLabel } from './admin-common.js';
 import { renderReport } from './puzzle-report.js';
 import { DIFFICULTIES } from '../core/generator.js';
 import { problemStats } from '../core/difficulty-report.js';
@@ -25,11 +25,14 @@ async function load() {
     return;
   }
   const p = data.problem;
-  document.title = `${p.bookTitle} ${p.position} - Grid Loop 管理`;
+  setCrumbs([
+    { label: '問題一覧', href: listHref() },
+    { label: p.bookTitle, href: adminUrl(`admin.html?book=${p.bookId}`) },
+    { label: `${p.position} 問目` },
+  ], `${p.bookTitle} ${p.position} 問目`);
   $('detail-title').textContent = `${p.bookTitle}　${p.position} / ${data.bookCount} 問目`;
   link($('prev'), data.prevId);
   link($('next'), data.nextId);
-  $('to-book').href = `../admin.html?book=${p.bookId}`;
   $('play').href = `../?p=${encodeURIComponent(p.code)}`;
   puzzle = decodePuzzle(p.code);
   drawBoard();
@@ -123,11 +126,15 @@ async function analyze(p) {
   }
 }
 
+/** 問題一覧へ戻る URL。最後に見ていた絞り込みと並べ替えのまま。 */
+function listHref() {
+  let last = '';
+  try { last = sessionStorage.getItem('admin-problems-query') ?? ''; } catch { /* 覚えていなければ、絞り込みなしの一覧へ */ }
+  return adminUrl(`admin/problems.html${last}`);
+}
+
 $('metrics').after(metricGuide());
 $('show-answer').addEventListener('change', drawBoard);
-// 一覧に戻るときは、最後に見ていた絞り込みと並べ替えのまま
-try {
-  const last = sessionStorage.getItem('admin-problems-query');
-  if (last) $('to-list').href = `problems.html${last}`;
-} catch { /* 覚えていなければ、絞り込みなしの一覧へ */ }
+adminNav('problems');
+setCrumbs([{ label: '問題一覧', href: listHref() }, { label: '問題' }]);
 startAdmin(() => load());
