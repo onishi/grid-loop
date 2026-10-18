@@ -591,7 +591,7 @@ const DEFINITIONS = [
   },
   {
     id: 'no-shortcut-loop',
-    category: 'loop', level: 4, match: 'shortcut',
+    category: 'loop', level: 4, match: 'shortcut', last: true,
     title: '近道で輪を閉じてはいけない（まだ線の要る数字がある）',
     rows: 3, cols: 4, anchor: 'none',
     clues: [[2, 0, 2]],
@@ -653,7 +653,7 @@ const DEFINITIONS = [
   {
     id: 'pair-adjacent',
     origin: 'stage',
-    category: 'numbers', level: 5, match: 'local-2', pair: 'adj',
+    category: 'numbers', level: 5, match: 'local-2', pair: 'adj', last: true,
     title: 'となり合う数字は、境目が線か × かで考える',
     rows: 3, cols: 4, anchor: 'none',
     clues: [[1, 1, 1], [1, 2, 3]],
@@ -664,7 +664,7 @@ const DEFINITIONS = [
   {
     id: 'pair-diagonal',
     origin: 'stage',
-    category: 'numbers', level: 5, match: 'local-2', pair: 'diag',
+    category: 'numbers', level: 5, match: 'local-2', pair: 'diag', last: true,
     title: '斜めに並ぶ数字は、間の点で線を受けわたす',
     rows: 4, cols: 4, anchor: 'none',
     clues: [[1, 1, 2], [2, 2, 3]],
@@ -688,13 +688,14 @@ const DEFINITIONS = [
 
 /**
  * 定石の一覧。定番（popular の順）を先に、そのあとはやさしい順（level の小さい順。同じなら出番の多い順）。
+ * last を付けた定石（数手先まで試す・2 つの数字をまとめて調べる、考え方の込み入ったもの）はいちばん後ろ。
  * usage は 1 問を解くあいだにその定石で決められる辺の数の平均で、
  * tools/pattern-stats.js が実測して pattern-stats.js に書き出す。
  */
 export const PATTERNS = DEFINITIONS
   .map((pattern, index) => ({ ...pattern, usage: PATTERN_USAGE[pattern.id] ?? 0, index }))
   .sort((a, b) => (a.popular ?? Infinity) - (b.popular ?? Infinity)
-    || a.level - b.level || b.usage - a.usage || a.index - b.index)
+    || Number(!!a.last) - Number(!!b.last) || a.level - b.level || b.usage - a.usage || a.index - b.index)
   .map(({ index, ...pattern }) => pattern);
 
 /**
