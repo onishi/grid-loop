@@ -84,12 +84,29 @@ export class Board {
       svg.appendChild(el);
       return el;
     };
+    const regionLayer = layer('regions');
     const focusLayer = layer('focus');
     const clueLayer = layer('clues');
     const crossLayer = layer('crosses');
     const dotLayer = layer('dots');
     const edgeLayer = layer('edges');
     const cursorLayer = layer('cursors');
+
+    // 線で囲まれた区画の色（設定でオンにしたときだけ。setRegions で塗る）
+    this.regionEls = new Array(g.cellCount);
+    this.regionColors = null;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('class', 'region-cell');
+        rect.setAttribute('x', c);
+        rect.setAttribute('y', r);
+        rect.setAttribute('width', 1);
+        rect.setAttribute('height', 1);
+        regionLayer.appendChild(rect);
+        this.regionEls[r * cols + c] = rect;
+      }
+    }
 
     // ヒントの根拠となるマスの下地
     this.focusCellEls = new Array(g.cellCount);
@@ -166,6 +183,24 @@ export class Board {
     this.cursorEl.setAttribute('class', 'cursor');
     this.cursorEl.setAttribute('rx', 0.06);
     cursorLayer.appendChild(this.cursorEl);
+  }
+
+  /**
+   * 線で囲まれた区画に色を塗る。colors はマスごとの色の番号（null なら塗らない）。変わったマスだけ触る。
+   * @param {Int8Array|null} colors
+   */
+  setRegions(colors) {
+    if (!this.regionEls) return;
+    const before = this.regionColors;
+    for (let cell = 0; cell < this.regionEls.length; cell++) {
+      const was = before ? before[cell] : -1;
+      const now = colors ? colors[cell] : -1;
+      if (was === now) continue;
+      const el = this.regionEls[cell];
+      if (was >= 0) el.classList.remove(`rc${was}`);
+      if (now >= 0) el.classList.add(`rc${now}`);
+    }
+    this.regionColors = colors ? Int8Array.from(colors) : null;
   }
 
   /** 表示を現在の状態に合わせる。変化した要素だけ触る。 */
