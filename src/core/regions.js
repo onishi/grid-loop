@@ -1,56 +1,73 @@
 /**
- * 線で囲まれた区画。引いた線を壁にして、マスを上下左右のつながりで分ける。
- * 盤の外周の辺がどれも決まっている（線か ×）区画は、もう外から線が入る余地がないので「閉じた区画」。
- * 外周にまだ決まっていない辺が 1 本でも残っていれば「開いた区画」。
- * 設定「線で囲まれた区画に色をつける」で、閉じた区画だけに色を塗る（閉じた区画を増やしすぎないように気づける）。
+ * 閉じた区画。線と ×（もう線の入らない辺）で囲まれて、外から線が入る余地のないマスのまとまり。
+ * 盤の外から、まだ決まっていない辺だけを通って届くマスは「開いている」。届かないマスを、線でない辺（× かまだ決まっていない辺）で
+ * つないでまとめ、線に接しているものを「閉じた区画」とする（× だけで囲まれた 0 のまわりなどは数えない）。
+ * 設定「線で囲まれた区画に色をつける」で、閉じた区画に色を塗る（閉じた区画を 2 つ以上作ってしまわないように気づける）。
  */
 
 import { LINE, UNKNOWN } from './grid.js';
 
 /**
- * マスを区画に分ける。となりのマスとの境目の辺が線でなければ、同じ区画。
- * @returns {{id: Int32Array, count: number, open: Uint8Array}} id はマスごとの区画の番号（0 から count - 1）。
- *   open は区画ごとに、外周にまだ決まっていない辺が残っている（外から線が入る余地がある）なら 1
+ * 閉じた区画を探す。
+ * @returns {{id: Int32Array, count: number}} id はマスごとの区画の番号（0 から count - 1。閉じた区画でなければ -1）
  */
-export function lineRegions(grid, state) {
+export function closedRegions(grid, state) {
   const { rows, cols, cellCount } = grid;
-  const id = new Int32Array(cellCount).fill(-1);
-  let count = 0;
-  const open = [];
+  // 右・左・下・上のとなり（盤の外なら -1）と、そのあいだの辺
+  const around = (cell) => {
+    const r = Math.floor(cell / cols);
+    const c = cell % cols;
+    return [
+      [c + 1 < cols ? cell + 1 : -1, grid.v(r, c + 1)],
+      [c > 0 ? cell - 1 : -1, grid.v(r, c)],
+      [r + 1 < rows ? cell + cols : -1, grid.h(r + 1, c)],
+      [r > 0 ? cell - cols : -1, grid.h(r, c)],
+    ];
+  };
+
+  // 盤の外から、まだ決まっていない辺だけを通って届くマス
+  const reached = new Uint8Array(cellCount);
   const stack = [];
+  for (let cell = 0; cell < cellCount; cell++) {
+    if (around(cell).some(([to, edge]) => to < 0 && state[edge] === UNKNOWN)) {
+      reached[cell] = 1;
+      stack.push(cell);
+    }
+  }
+  while (stack.length) {
+    for (const [to, edge] of around(stack.pop())) {
+      if (to < 0 || reached[to] || state[edge] !== UNKNOWN) continue;
+      reached[to] = 1;
+      stack.push(to);
+    }
+  }
+
+  // 届かないマスを、線でない辺でつないでまとめる。線に接するまとまりだけを区画にする
+  const id = new Int32Array(cellCount).fill(-1);
+  const seen = new Uint8Array(cellCount);
+  let count = 0;
   for (let start = 0; start < cellCount; start++) {
-    if (id[start] >= 0) continue;
-    id[start] = count;
-    stack.push(start);
-    let toOutside = 0;
-    while (stack.length) {
-      const cell = stack.pop();
-      const r = Math.floor(cell / cols);
-      const c = cell % cols;
-      // 盤の外周の辺で、まだ決まっていないものがあれば、開いている
-      if ((r === 0 && state[grid.h(0, c)] === UNKNOWN) || (r === rows - 1 && state[grid.h(rows, c)] === UNKNOWN)
-        || (c === 0 && state[grid.v(r, 0)] === UNKNOWN) || (c === cols - 1 && state[grid.v(r, cols)] === UNKNOWN)) toOutside = 1;
-      // 右・左・下・上のとなりと、そのあいだの辺
-      const next = [
-        [c + 1 < cols, cell + 1, grid.v(r, c + 1)],
-        [c > 0, cell - 1, grid.v(r, c)],
-        [r + 1 < rows, cell + cols, grid.h(r + 1, c)],
-        [r > 0, cell - cols, grid.h(r, c)],
-      ];
-      for (const [inside, to, edge] of next) {
-        if (!inside || id[to] >= 0 || state[edge] === LINE) continue;
-        id[to] = count;
-        stack.push(to);
+    if (reached[start] || seen[start]) continue;
+    const group = [start];
+    seen[start] = 1;
+    let touchesLine = false;
+    for (let i = 0; i < group.length; i++) {
+      for (const [to, edge] of around(group[i])) {
+        if (state[edge] === LINE) { touchesLine = true; continue; }
+        if (to < 0 || reached[to] || seen[to]) continue;
+        seen[to] = 1;
+        group.push(to);
       }
     }
-    open.push(toOutside);
+    if (!touchesLine) continue;
+    for (const cell of group) id[cell] = count;
     count++;
   }
-  return { id, count, open: Uint8Array.from(open) };
+  return { id, count };
 }
 
 /**
- * 閉じた区画（外周の辺がどれも線か × で決まっている区画）にだけ色を割り当てる。開いた区画は塗らない（-1）。
+ * 閉じた区画に色を割り当てる。区画でないマスは塗らない（-1）。
  * 前の色をなるべく引き継ぐ：大きい区画から順に、前にいちばん多く塗られていた色をもらう
  * （2 つの区画がつながったら、大きい方の色になる。分かれたら、大きい方が元の色のまま、小さい方に新しい色）。
  * 閉じた区画が無ければ null。
@@ -60,14 +77,14 @@ export function lineRegions(grid, state) {
  * @returns {Int8Array|null} マスごとの色の番号
  */
 export function regionColors(regions, previous, palette) {
-  const { id, count, open } = regions;
-  if (!open.some((x) => !x)) return null;
+  const { id, count } = regions;
+  if (!count) return null;
   const size = new Int32Array(count);
-  for (let i = 0; i < id.length; i++) size[id[i]]++;
+  for (let i = 0; i < id.length; i++) if (id[i] >= 0) size[id[i]]++;
   const order = [...Array(count).keys()].sort((a, b) => size[b] - size[a] || a - b);
   const colorOf = new Int8Array(count).fill(-1);
   const used = new Set();
-  for (const region of order.filter((x) => !open[x])) {
+  for (const region of order) {
     // 前にこの区画のマスに塗られていた色を数え、まだ使っていない色のうちいちばん多いものを引き継ぐ
     const votes = new Map();
     if (previous) {
@@ -85,7 +102,7 @@ export function regionColors(regions, previous, palette) {
     used.add(pick);
     colorOf[region] = pick;
   }
-  const out = new Int8Array(id.length);
-  for (let i = 0; i < id.length; i++) out[i] = colorOf[id[i]];
+  const out = new Int8Array(id.length).fill(-1);
+  for (let i = 0; i < id.length; i++) if (id[i] >= 0) out[i] = colorOf[id[i]];
   return out;
 }

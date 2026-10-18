@@ -7,7 +7,7 @@ import { renderPatternsInto } from './patterns-view.js';
 import { findMatches } from '../core/pattern-match.js';
 import { PATTERNS } from '../core/patterns.js';
 import { loadPatternSettings } from './pattern-settings.js';
-import { lineRegions, regionColors } from '../core/regions.js';
+import { closedRegions, regionColors } from '../core/regions.js';
 import { PuzzleService } from './puzzle-service.js';
 import { PatternCards } from './pattern-cards.js';
 import { PhotoImport } from './photo-import.js';
@@ -1431,14 +1431,13 @@ let regionPrev = null;   // 前に塗った色（マスごと）。区画がつ�
 let regionPuzzle = null; // その色を塗った問題
 
 /**
- * 設定「線で囲まれた区画に色をつける」が有効なら、引いた線（と盤の縁）で分かれたマスの区画を色分けする。
- * 区画が 1 つだけのときは塗らない。
+ * 設定「線で囲まれた区画に色をつける」が有効なら、線と × で閉じた（外から線が入る余地のない）区画を色分けする。
  */
 function updateRegions() {
   if (!board || !game.grid) return;
   if (regionPuzzle !== game.puzzle) { regionPrev = null; regionPuzzle = game.puzzle; }
   const colors = el.regions.checked
-    ? regionColors(lineRegions(game.grid, game.state), regionPrev, REGION_PALETTE)
+    ? regionColors(closedRegions(game.grid, game.state), regionPrev, REGION_PALETTE)
     : null;
   regionPrev = colors;
   board.setRegions(colors);
