@@ -58,6 +58,8 @@ const el = {
   autobasic: $('opt-autobasic'),
   regions: $('opt-regions'),
   code: $('puzzle-code'),
+  loadCode: $('load-code'),
+  shareLink: $('share-link'),
   copy: $('btn-copy'),
   load: $('btn-load'),
   rulesModal: $('rules-modal'),
@@ -324,11 +326,11 @@ function bindUI() {
   }
 
   el.copy.addEventListener('click', copyCode);
-  el.load.addEventListener('click', () => { if (tryLoadCode(el.code.value, false)) closeMenu(); });
-  el.code.addEventListener('keydown', (ev) => {
+  el.load.addEventListener('click', loadFromMenu);
+  el.loadCode.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter') {
       ev.preventDefault();
-      if (tryLoadCode(el.code.value, false)) closeMenu();
+      loadFromMenu();
     }
   });
 
@@ -379,7 +381,7 @@ function bindUI() {
       if ((view === 'library' || view === 'history' || view === 'books') && !account.loggedIn) {
         const why = {
           books: '問題集で遊ぶには、ログインしてください。',
-          library: '問題リストを使うには、ログインしてください。',
+          library: '保存した問題を見るには、ログインしてください。',
           history: '解いた履歴を残すには、ログインしてください。',
         }[view];
         requireLogin(why, () => { openMenu(); if (view === 'books') shelf().showList(); else showMenuView(view); });
@@ -389,7 +391,7 @@ function bindUI() {
       else showMenuView(view);
     });
   }
-  for (const b of el.menuModal.querySelectorAll('[data-back]')) b.addEventListener('click', () => showMenuView('main'));
+  for (const b of el.menuModal.querySelectorAll('[data-back]')) b.addEventListener('click', backMenu);
   for (const b of el.menuModal.querySelectorAll('[data-close]')) b.addEventListener('click', closeMenu);
   el.menuModal.addEventListener('click', (ev) => {
     if (ev.target === el.menuModal) closeMenu();
@@ -426,7 +428,7 @@ function bindUI() {
       if (isPatternsOpen()) { hidePatterns(); return; }
       if (!el.menuModal.hidden) {
         // 奥の画面ならメニューの最初の画面へ、最初の画面なら閉じる
-        if (menuView !== 'main') showMenuView('main'); else closeMenu();
+        if (menuView !== 'main') backMenu(); else closeMenu();
         return;
       }
       if (!el.overlay.hidden) { hideOverlay(); return; }
@@ -485,6 +487,16 @@ function bindUI() {
 
 let puzzleReport = null;
 let menuView = 'main';
+const MENU_PARENTS = { new: 'main', current: 'main', photo: 'new', load: 'new', books: 'new',
+  book: 'books', report: 'current', share: 'current', library: 'main', history: 'main', settings: 'main' };
+
+function backMenu() {
+  const previous = menuView;
+  if (previous === 'book') { shelf().showList(); return; }
+  const parent = MENU_PARENTS[previous] || 'main';
+  showMenuView(parent);
+  el.menuModal.querySelector(`.menu-view[data-view="${parent}"] [data-go="${previous}"]`)?.focus({ preventScroll: true });
+}
 // メニューの「問題集」。どの問題集の何番を遊んでいるかも覚える（初めて使うときに作る）
 let shelfInstance = null;
 const shelf = () => (shelfInstance ??= new BookShelf({
@@ -494,7 +506,7 @@ const shelf = () => (shelfInstance ??= new BookShelf({
   onChange: showWhere,
 }));
 
-/** メニューの上に、問題集の名前と何番か、取り込んだときに読んだ文字（題・作者など）を出す。 */
+/** 「この問題」に、問題集の名前と何番か、取り込んだときに読んだ文字を出す。 */
 function renderProblemInfo() {
   const where = shelfInstance?.where();
   el.problemInfo.hidden = !where;
@@ -516,15 +528,21 @@ function openMenu() {
 }
 
 /**
- * メニューの中の画面を切り替える。最初の画面には、よく使うものだけを置き、
- * 難易度のくわしい分析・問題リスト・問題コード・設定は、それぞれ奥の画面にする。
+ * メニューを目的ごとの画面に切り替え、見出しとフォーカスを合わせる。
  */
 function showMenuView(name) {
   menuView = name;
   for (const view of el.menuModal.querySelectorAll('.menu-view')) view.hidden = view.dataset.view !== name;
   el.menuModal.querySelector('.modal-card').scrollTop = 0;
+  const heading = el.menuModal.querySelector(`.menu-view[data-view="${name}"] h2`);
+  heading.id ||= `menu-title-${name}`;
+  el.menuModal.querySelector('[role="dialog"]').setAttribute('aria-labelledby', heading.id);
+  if (name === 'share') {
+    el.shareLink.value = shareUrl();
+    el.copy.querySelector('span:last-child').textContent = 'リンクをコピー';
+  }
+  if (name === 'load') $('load-error').hidden = true;
   if (name === 'main') {
-    // とじるボタンは最後にあるので、そこへ送られないようにする
     el.closeMenu.focus({ preventScroll: true });
   } else {
     el.menuModal.querySelector(`.menu-view[data-view="${name}"] .menu-sub-head .icon-btn`).focus({ preventScroll: true });
@@ -595,7 +613,7 @@ function closeLogin() {
   account.pending = null;
 }
 
-/** メニューのいちばん上：ゲストならログインのボタン、ログイン中なら名前とログアウト。 */
+/** メニューの下端：ログイン、または名前とログアウト。 */
 function renderAccount() {
   const row = el.accountRow;
   if (!row) return;
@@ -618,9 +636,7 @@ function renderAccount() {
     text.className = 'account-text';
     const name = document.createElement('b');
     name.textContent = u.name || u.email || 'ログイン中';
-    const sub = document.createElement('small');
-    sub.textContent = 'リスト・履歴・途中の盤面をどの端末でも';
-    text.append(name, sub);
+    text.append(name);
     who.appendChild(text);
     const out = document.createElement('button');
     out.type = 'button';
@@ -629,14 +645,12 @@ function renderAccount() {
     out.addEventListener('click', () => account.logout());
     row.append(who, out);
   } else {
-    const text = document.createElement('p');
-    text.className = 'account-guest';
-    text.textContent = 'ログインすると、問題集・問題リスト・解いた履歴が使え、どの端末でも続きから遊べます。';
-    const btn = document.createElement('div');
-    btn.className = 'account-google';
-    row.append(text, btn);
-    account.pending = null;
-    account.renderButton(btn);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'menu-row';
+    btn.textContent = 'ログイン';
+    btn.addEventListener('click', () => requireLogin(''));
+    row.append(btn);
   }
 }
 
@@ -748,6 +762,9 @@ function setupPhotoImport() {
     },
   });
   for (const input of [el.photoCamera, el.photoPick]) {
+    input.closest('label').addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); input.closest('label').click(); }
+    });
     input.addEventListener('change', () => {
       const file = input.files && input.files[0];
       input.value = '';
@@ -809,7 +826,7 @@ function keepInLibrary(p, source, solved) {
 
 function saveToLibrary(p, source) {
   keepInLibrary(p, source);
-  say('問題リストに入れました');
+  say('問題を保存しました');
 }
 
 /** メニューの「問題リスト」を描く。 */
@@ -1274,6 +1291,21 @@ function restoreSaved() {
     return true;
   } catch {
     return false;
+  }
+}
+
+function loadFromMenu() {
+  const error = $('load-error');
+  error.hidden = true;
+  let code = el.loadCode.value.trim();
+  if (/^https?:\/\//i.test(code)) {
+    try { code = new URL(code).searchParams.get('p') || ''; } catch { code = ''; }
+  }
+  if (tryLoadCode(code, false)) closeMenu();
+  else {
+    error.textContent = el.message.textContent;
+    error.hidden = false;
+    el.loadCode.focus();
   }
 }
 
@@ -1953,19 +1985,26 @@ function persist() {
  * いまの問題を URL（?p=問題コード）に出す。新しい問題になるたびに書き換えるので、
  * そのまま URL を送れば同じ問題を開ける。履歴は増やさない（戻るボタンで前の問題に戻ることはしない）。
  */
-async function copyCode() {
+function shareUrl() {
   const url = new URL(location.href);
   url.searchParams.set('p', el.code.value);
-  const text = url.toString();
+  return url.toString();
+}
+
+async function copyCode() {
+  const text = shareUrl();
+  el.shareLink.value = text;
   try {
     await navigator.clipboard.writeText(text);
     say('共有リンクをコピーしました');
     // メニューの中では下のメッセージが見えないので、ボタンでも知らせる
     const label = el.copy.querySelector('span:last-child');
     label.textContent = 'コピーしました';
-    setTimeout(() => { label.textContent = 'コピー'; }, 1600);
+    setTimeout(() => { label.textContent = 'リンクをコピー'; }, 1600);
   } catch {
-    el.code.select();
+    el.shareLink.focus();
+    el.shareLink.select();
+    el.copy.querySelector('span:last-child').textContent = 'コピーできませんでした';
     say('コピーできませんでした。手動で選択してください', true);
   }
 }

@@ -108,37 +108,33 @@
   <div class="modal-card menu-card" role="dialog" aria-modal="true" aria-labelledby="menu-title">
     <!-- メニューの最初の画面。よく使うものだけを置き、ほかは下の画面へ送る -->
     <section class="menu-view" data-view="main">
-      <h2 id="menu-title">メニュー</h2>
-
-      <!-- ゲストならログインのボタン、ログイン中なら名前とログアウト -->
-      <div class="account-row" id="account-row"></div>
-
-      <!-- 問題集の問題なら、問題集の名前と何番か、取り込んだときに盤のまわりから読んだ文字（題・作者など） -->
-      <div class="problem-info" id="problem-info" hidden>
-        <div class="problem-info-head"><span class="mi" aria-hidden="true">menu_book</span><b id="problem-info-book"></b></div>
-        <p class="problem-info-meta" id="problem-info-meta" hidden></p>
+      <div class="menu-sub-head">
+        <h2 id="menu-title">メニュー</h2>
+        <button type="button" class="icon-btn menu-x" id="btn-close-menu" aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
-
-      <!-- いまの問題に関すること -->
       <div class="menu-list">
-        <button type="button" class="menu-row menu-nav report-row" data-go="report">
-          <span class="mi" aria-hidden="true">insights</span>
-          <span class="menu-row-text">難易度 <b id="report-summary"></b></span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </button>
-        <button type="button" class="menu-row menu-nav" data-go="code">
-          <span class="mi" aria-hidden="true">qr_code_2</span><span class="menu-row-text">問題コード</span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </button>
-        <button type="button" class="menu-row" id="btn-save-current">
-          <span class="mi" aria-hidden="true">bookmark_add</span><span class="menu-row-text">問題リストに入れる</span>
-        </button>
-        <button type="button" class="menu-row danger" id="btn-clear">
-          <span class="mi" aria-hidden="true">delete</span><span class="menu-row-text">ぜんぶ消す</span>
-        </button>
+        <button type="button" class="menu-row menu-nav" data-go="new"><span class="menu-row-text">新しい問題</span><span class="menu-chevron" aria-hidden="true">›</span></button>
+        <button type="button" class="menu-row menu-nav" data-go="current"><span class="menu-row-text">この問題</span><span class="menu-chevron" aria-hidden="true">›</span></button>
       </div>
+      <div class="menu-list">
+        <a class="menu-row" href="practice.html"><span class="menu-row-text">定石の練習</span><span class="menu-chevron" aria-hidden="true">›</span></a>
+      </div>
+      <div class="menu-list">
+        <button type="button" class="menu-row menu-nav" data-go="library"><span class="menu-row-text">保存した問題 <small id="library-count"></small></span><span class="menu-chevron" aria-hidden="true">›</span></button>
+        <button type="button" class="menu-row menu-nav" data-go="history"><span class="menu-row-text">解いた履歴</span><span class="menu-chevron" aria-hidden="true">›</span></button>
+      </div>
+      <div class="menu-list">
+        <button type="button" class="menu-row menu-nav" data-go="settings"><span class="menu-row-text">設定</span><span class="menu-chevron" aria-hidden="true">›</span></button>
+      </div>
+      <div class="account-row" id="account-row"></div>
+    </section>
 
-      <!-- 新しい問題を始める -->
+    <section class="menu-view" data-view="new" hidden>
+      <div class="menu-sub-head">
+        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span aria-hidden="true">←</span></button>
+        <h2>新しい問題</h2>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
+      </div>
       <div class="new-row">
         <label class="field">
           <span>大きさ</span>
@@ -162,48 +158,77 @@
         </label>
       </div>
       <button type="button" class="primary wide" id="btn-new"><span class="mi" aria-hidden="true">add</span>作る</button>
-      <div class="photo-row">
-        <label class="photo-btn"><span class="mi" aria-hidden="true">photo_camera</span><span>撮影して作る</span>
+      <div class="menu-list">
+        <button type="button" class="menu-row menu-nav" data-go="photo"><span class="mi" aria-hidden="true">photo_library</span><span class="menu-row-text">写真から取り込む</span><span class="menu-chevron" aria-hidden="true">›</span></button>
+        <button type="button" class="menu-row menu-nav" data-go="load"><span class="mi" aria-hidden="true">qr_code_2</span><span class="menu-row-text">コードから開く</span><span class="menu-chevron" aria-hidden="true">›</span></button>
+        <button type="button" class="menu-row menu-nav" data-go="books"><span class="mi" aria-hidden="true">menu_book</span><span class="menu-row-text">問題集</span><span class="menu-chevron" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+
+    <section class="menu-view" data-view="current" hidden>
+      <div class="menu-sub-head">
+        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span aria-hidden="true">←</span></button>
+        <h2>この問題</h2>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
+      </div>
+      <div class="problem-info" id="problem-info" hidden>
+        <div class="problem-info-head"><span class="mi" aria-hidden="true">menu_book</span><b id="problem-info-book"></b></div>
+        <p class="problem-info-meta" id="problem-info-meta" hidden></p>
+      </div>
+
+      <div class="menu-list">
+        <button type="button" class="menu-row menu-nav report-row" data-go="report">
+          <span class="mi" aria-hidden="true">insights</span>
+          <span class="menu-row-text">難易度 <b id="report-summary"></b></span>
+          <span class="menu-chevron" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="menu-row menu-nav" data-go="share">
+          <span class="mi" aria-hidden="true">qr_code_2</span><span class="menu-row-text">共有</span>
+          <span class="menu-chevron" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="menu-row" id="btn-save-current">
+          <span class="mi" aria-hidden="true">bookmark_add</span><span class="menu-row-text">保存する</span>
+        </button>
+        <button type="button" class="menu-row danger" id="btn-clear">
+          <span class="mi" aria-hidden="true">delete</span><span class="menu-row-text">印をすべて消す</span>
+        </button>
+      </div>
+
+    </section>
+
+    <section class="menu-view" data-view="photo" hidden>
+      <div class="menu-sub-head">
+        <button type="button" class="icon-btn" data-back aria-label="新しい問題にもどる"><span aria-hidden="true">←</span></button>
+        <h2>写真から取り込む</h2>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
+      </div>
+      <div class="menu-list photo-actions">
+        <label class="menu-row photo-btn" tabindex="0" role="button"><span class="mi" aria-hidden="true">photo_camera</span><span>撮影する</span>
           <input type="file" accept="image/*" capture="environment" id="photo-camera" hidden></label>
-        <label class="photo-btn"><span class="mi" aria-hidden="true">photo_library</span><span>写真から作る</span>
+        <label class="menu-row photo-btn" tabindex="0" role="button"><span class="mi" aria-hidden="true">photo_library</span><span>画像を選ぶ</span>
           <input type="file" accept="image/*" id="photo-pick" hidden></label>
       </div>
-      <div class="menu-list">
-        <a class="menu-row" href="practice.html">
-          <span class="mi" aria-hidden="true">school</span><span class="menu-row-text">定石の練習</span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </a>
-        <button type="button" class="menu-row menu-nav" data-go="books">
-          <span class="mi" aria-hidden="true">menu_book</span><span class="menu-row-text">問題集</span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </button>
-        <button type="button" class="menu-row menu-nav" data-go="library">
-          <span class="mi" aria-hidden="true">bookmarks</span><span class="menu-row-text">問題リスト <small id="library-count"></small></span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </button>
-      </div>
+    </section>
 
-      <!-- そのほか -->
-      <div class="menu-list">
-        <button type="button" class="menu-row menu-nav" data-go="history">
-          <span class="mi" aria-hidden="true">history</span><span class="menu-row-text">解いた履歴</span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </button>
-        <button type="button" class="menu-row menu-nav" data-go="settings">
-          <span class="mi" aria-hidden="true">tune</span><span class="menu-row-text">設定</span>
-          <span class="mi chev" aria-hidden="true">chevron_right</span>
-        </button>
+    <section class="menu-view" data-view="load" hidden>
+      <div class="menu-sub-head">
+        <button type="button" class="icon-btn" data-back aria-label="新しい問題にもどる"><span aria-hidden="true">←</span></button>
+        <h2>コードから開く</h2>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
-
-      <button type="button" class="close-btn" id="btn-close-menu">とじる</button>
+      <div class="code-row">
+        <input type="text" id="load-code" spellcheck="false" autocomplete="off" aria-label="問題コードまたはリンク">
+        <button type="button" id="btn-load">開く</button>
+      </div>
+      <p id="load-error" class="menu-error" role="alert" hidden></p>
     </section>
 
     <!-- この問題の難易度（くわしく） -->
     <section class="menu-view" data-view="report" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
+        <button type="button" class="icon-btn" data-back aria-label="この問題にもどる"><span aria-hidden="true">←</span></button>
         <h2>難易度</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
       <div class="puzzle-report" id="puzzle-report" aria-live="polite"></div>
     </section>
@@ -211,9 +236,9 @@
     <!-- 問題集（ログイン中だけ）：公開中の問題集の一覧 -->
     <section class="menu-view" data-view="books" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
+        <button type="button" class="icon-btn" data-back aria-label="新しい問題にもどる"><span aria-hidden="true">←</span></button>
         <h2>問題集</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
       <ul class="library book-list" id="book-list"></ul>
     </section>
@@ -221,9 +246,9 @@
     <!-- 問題集 1 冊：問題の一覧。解いた問題には印 -->
     <section class="menu-view" data-view="book" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" id="btn-book-back" aria-label="問題集の一覧にもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
+        <button type="button" class="icon-btn" id="btn-book-back" aria-label="問題集の一覧にもどる"><span aria-hidden="true">←</span></button>
         <h2 id="book-title">問題集</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
       <p class="book-desc" id="book-desc"></p>
       <div class="book-progress" id="book-progress"></div>
@@ -233,9 +258,9 @@
     <!-- 問題リスト -->
     <section class="menu-view" data-view="library" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
-        <h2>問題リスト</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span aria-hidden="true">←</span></button>
+        <h2>保存した問題</h2>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
       <ul class="library" id="library-list"></ul>
     </section>
@@ -243,34 +268,30 @@
     <!-- 解いた履歴（ログイン中だけ） -->
     <section class="menu-view" data-view="history" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
+        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span aria-hidden="true">←</span></button>
         <h2>解いた履歴</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
       <ul class="library" id="history-list"></ul>
     </section>
 
-    <!-- 問題コード -->
-    <section class="menu-view" data-view="code" hidden>
+    <section class="menu-view" data-view="share" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
-        <h2>問題コード</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn" data-back aria-label="この問題にもどる"><span aria-hidden="true">←</span></button>
+        <h2>共有</h2>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
-      <div class="code-row">
-        <input type="text" id="puzzle-code" spellcheck="false" autocomplete="off" aria-label="問題コード">
-        <button type="button" class="with-icon" id="btn-copy"><span class="mi" aria-hidden="true">content_copy</span><span>コピー</span></button>
-        <button type="button" class="with-icon" id="btn-load"><span class="mi" aria-hidden="true">file_open</span><span>読み込む</span></button>
-      </div>
-      <p class="hint-text">コードを送ると、同じ問題で遊べます。</p>
+      <input type="hidden" id="puzzle-code">
+      <input type="text" id="share-link" class="share-link" readonly aria-label="共有リンク">
+      <button type="button" class="primary wide" id="btn-copy"><span>リンクをコピー</span></button>
     </section>
 
     <!-- 設定 -->
     <section class="menu-view" data-view="settings" hidden>
       <div class="menu-sub-head">
-        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span class="mi" aria-hidden="true">arrow_back</span></button>
+        <button type="button" class="icon-btn" data-back aria-label="メニューにもどる"><span aria-hidden="true">←</span></button>
         <h2>設定</h2>
-        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span class="mi" aria-hidden="true">close</span></button>
+        <button type="button" class="icon-btn menu-x" data-close aria-label="メニューをとじる"><span aria-hidden="true">×</span></button>
       </div>
       <h3>入力と表示</h3>
       <div class="options">
