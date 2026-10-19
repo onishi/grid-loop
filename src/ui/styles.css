@@ -60,6 +60,25 @@
 
 * { box-sizing: border-box; }
 
+/* 定石の練習は、ゲームの保存状態から独立した小さな盤を使う。 */
+.practice-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.practice-main p { margin: 0; line-height: 1.7; }
+.practice-lead, .practice-note { color: var(--ink-soft); }
+.practice-note { font-size: .85rem; }
+.practice-main select { width: 100%; min-width: 0; max-width: 100%; }
+.practice-progress { color: var(--ink-soft); font-size: .9rem; }
+.practice-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.practice-controls button { flex: 1; min-height: 44px; }
+.practice-controls button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.practice-feedback { min-height: 3.4em; color: var(--accent); font-weight: 600; }
+.practice-feedback.is-wrong { color: var(--danger); }
+.practice-explanation { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.practice-explanation h2 { margin: 0 0 8px; font-size: 1rem; }
+.practice-explanation p { white-space: pre-line; }
+.practice-app .board-wrap { height: auto; padding: 10px; }
+#practice-board { max-height: 52dvh; }
+.menu-row[href] { color: inherit; text-decoration: none; }
+
 html, body {
   margin: 0;
   padding: 0;
@@ -234,7 +253,7 @@ button.primary:hover:not(:disabled) { filter: brightness(1.07); background: var(
   justify-content: center;
 }
 
-#board {
+#board, #practice-board {
   display: block;
   width: 100%;
   height: auto;
@@ -244,7 +263,7 @@ button.primary:hover:not(:disabled) { filter: brightness(1.07); background: var(
   -webkit-user-select: none;
   outline: none;
 }
-#board:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); border-radius: 8px; }
+#board:focus-visible, #practice-board:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); border-radius: 8px; }
 
 .dot { fill: var(--dot); transition: fill .12s ease; }
 .dot.lit { fill: var(--accent); }

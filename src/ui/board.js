@@ -282,13 +282,15 @@ export class Board {
   }
 
   clearHints() {
-    if (this.hintEdges.size === 0 && this.focusCells.size === 0 && this.focusVertices.size === 0) return;
+    if (this.hintEdges.size === 0 && this.focusCells.size === 0 && this.focusVertices.size === 0
+      && this.focusEdges.size === 0 && this.trialMarks.size === 0 && !this.showCursor) return;
     this.hintEdges.clear();
     this.focusCells.clear();
     this.focusVertices.clear();
     this.focusEdges.clear();
     this.trialMarks.clear();
     this.showCursor = false;
+    this._drawCursor();
     this.rendered.fill(-1);
     this.refresh();
   }
@@ -730,6 +732,7 @@ export class Board {
   }
 
   _drawCursor() {
+    if (this.showCursor && this.cursor >= 0) this.handlers.onCursorMove?.(this.cursor);
     if (!this.cursorEl) return;
     if (this.cursor < 0 || !this.showCursor) { this.cursorEl.classList.remove('on'); return; }
     const info = this.grid.edgeInfo[this.cursor];

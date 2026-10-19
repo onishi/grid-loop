@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f5f0">
+<title>定石の練習 · Grid Loop</title>
+<link rel="stylesheet" href="src/ui/styles.css">
+</head>
+<body>
+<div class="app doc practice-app">
+  <header class="topbar">
+    <h1 class="logo"><span class="logo-mark" aria-hidden="true"></span>定石の練習</h1>
+    <a href="index.html" class="back-link">ゲームに戻る</a>
+  </header>
+  <main class="practice-main">
+    <p class="practice-lead">線か × を選び、この定石で決まる辺に置いてみましょう。輪を完成させる必要はありません。</p>
+    <label class="field" for="practice-pattern"><span>練習する定石</span>
+      <select id="practice-pattern"></select>
+    </label>
+    <p id="practice-progress" class="practice-progress"></p>
+    <div class="board-wrap">
+      <svg id="practice-board" tabindex="0" role="group" aria-label="練習の盤面。矢印で辺を選び、R で向きを変え、スペースで線、X でバツを置く"></svg>
+    </div>
+    <div class="practice-controls" role="group" aria-label="置く印">
+      <button type="button" id="practice-line" aria-pressed="true">線を置く</button>
+      <button type="button" id="practice-cross" aria-pressed="false">× を置く</button>
+    </div>
+    <p id="practice-feedback" class="practice-feedback" role="status" aria-live="polite"></p>
+    <div class="practice-controls">
+      <button type="button" id="practice-reveal">答えと理由を見る</button>
+      <button type="button" id="practice-retry">もう一度</button>
+      <button type="button" id="practice-next" class="primary">次の定石</button>
+    </div>
+    <section id="practice-explanation" class="practice-explanation" hidden aria-label="この定石の理由">
+      <h2>なぜ決まる？</h2>
+      <p id="practice-why"></p>
+    </section>
+    <p class="practice-note">もとからある印は変更できません。練習の記録はこの端末だけに保存され、ゲームの途中経過は変わりません。</p>
+    <p class="practice-note">キーボード：盤面を選んで矢印キー、R で辺の向きを切り替え、スペースで線、X で ×。</p>
+    <a href="patterns.html" class="back-link">定石一覧で調べる</a>
+  </main>
+</div>
+<script type="module" src="src/ui/practice-page.js"></script>
+</body>
+</html>

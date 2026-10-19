@@ -170,6 +170,11 @@ function card(pattern, options, actions) {
   if (shortcut) article.appendChild(el('p', 'pat-combines', shortcut));
 
   if (pattern.caution) article.appendChild(el('p', 'pat-caution', pattern.caution));
+  if (pattern.conclude.length) {
+    const practice = el('a', 'back-link', 'この定石を練習する');
+    practice.href = `practice.html?pattern=${encodeURIComponent(pattern.id)}`;
+    article.appendChild(practice);
+  }
   return article;
 }
 

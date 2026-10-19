@@ -16,6 +16,7 @@ import { PuzzleReport } from './puzzle-report.js';
 import { store } from './storage.js';
 import { account } from './account.js';
 import { BookShelf } from './books.js';
+import { hintStage } from './hint-stage.js';
 import { renderHelpFigures } from './help-figures.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1652,7 +1653,7 @@ function showHint() {
 }
 
 /** ヒントの列の i 番目を見せる。ほかにもヒントがあれば ‹ › で切り替えられる。 */
-function showHintAt(i) {
+function showHintAt(i, stage = 0) {
   if (!hints.length) return;
   hintIndex = Math.max(0, Math.min(hints.length - 1, i));
   const hint = hints[hintIndex];
@@ -1681,12 +1682,29 @@ function showHintAt(i) {
     return;
   }
 
+  board.clearHints();
+  const view = hintStage(hint, stage, game.grid);
+  if (stage < 2) {
+    if (stage === 1) {
+      board.setHints([], view.focus);
+      board.ensureVisible(hint.edge);
+      board.cursor = hint.edge;
+      board.showCursor = true;
+    }
+    board._drawCursor();
+    renderHint(view, [
+      { label: stage === 0 ? '注目する場所を見る' : '次の一手を見る', primary: true,
+        run: () => showHintAt(hintIndex, stage + 1) },
+      { label: '自分で考える', run: () => { hideHint(); board.clearHints(); } },
+    ]);
+    return;
+  }
   board.setHints([hint.edge], hint.focus, hint.value);
   board.ensureVisible(hint.edge);
   board.cursor = hint.edge;
   board.showCursor = true;
   board._drawCursor();
-  renderHint(hint, [
+  renderHint(view, [
     { label: `この${hint.value === LINE ? '線' : '×'}を置く`, primary: true, run: () => placeHint(hint) },
     { label: '自分で考える', run: () => { hideHint(); board.clearHints(); } },
   ]);
