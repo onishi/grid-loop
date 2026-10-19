@@ -113,6 +113,12 @@
       <!-- ゲストならログインのボタン、ログイン中なら名前とログアウト -->
       <div class="account-row" id="account-row"></div>
 
+      <!-- 問題集の問題なら、問題集の名前と何番か、取り込んだときに盤のまわりから読んだ文字（題・作者など） -->
+      <div class="problem-info" id="problem-info" hidden>
+        <div class="problem-info-head"><span class="mi" aria-hidden="true">menu_book</span><b id="problem-info-book"></b></div>
+        <p class="problem-info-meta" id="problem-info-meta" hidden></p>
+      </div>
+
       <!-- いまの問題に関すること -->
       <div class="menu-list">
         <button type="button" class="menu-row menu-nav report-row" data-go="report">
