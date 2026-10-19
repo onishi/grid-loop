@@ -45,6 +45,9 @@ const el = {
   bookChip: $('book-chip'),
   bookChipTitle: $('book-chip-title'),
   bookChipNo: $('book-chip-no'),
+  problemInfo: $('problem-info'),
+  problemInfoBook: $('problem-info-book'),
+  problemInfoMeta: $('problem-info-meta'),
   overlayCard: $('overlay-card'),
   autocross: $('opt-autocross'),
   errors: $('opt-errors'),
@@ -490,7 +493,18 @@ const shelf = () => (shelfInstance ??= new BookShelf({
   onChange: showWhere,
 }));
 
+/** メニューの上に、問題集の名前と何番か、取り込んだときに読んだ文字（題・作者など）を出す。 */
+function renderProblemInfo() {
+  const where = shelfInstance?.where();
+  el.problemInfo.hidden = !where;
+  if (!where) return;
+  el.problemInfoBook.textContent = `${where.title}　${where.position} / ${where.count}`;
+  el.problemInfoMeta.hidden = !where.meta;
+  el.problemInfoMeta.textContent = where.meta ?? '';
+}
+
 function openMenu() {
+  renderProblemInfo();
   renderLibrary();
   renderHistory();
   renderAccount();

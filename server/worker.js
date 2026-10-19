@@ -352,14 +352,14 @@ async function publishedBook(db, userId, id, adminUser = false) {
   const { published, ...rest } = row;
   const book = { ...rest, visibility: visibilityOf(published) };
   const { results } = await db.prepare(
-    `SELECT p.id, p.position, p.code, p.rows, p.cols, p.difficulty, s.seconds, s.hints, s.patterns, s.solved_at AS solvedAt
+    `SELECT p.id, p.position, p.code, p.rows, p.cols, p.difficulty, p.meta, s.seconds, s.hints, s.patterns, s.solved_at AS solvedAt
      FROM book_problems p LEFT JOIN book_solved s ON s.problem_id = p.id AND s.user_id = ?
      WHERE p.book_id = ? ORDER BY p.position`,
   ).bind(userId, id).all();
   return json({
     book,
     problems: results.map((p) => ({
-      id: p.id, position: p.position, code: p.code, rows: p.rows, cols: p.cols, difficulty: p.difficulty,
+      id: p.id, position: p.position, code: p.code, rows: p.rows, cols: p.cols, difficulty: p.difficulty, meta: p.meta || null,
       solved: p.solvedAt != null, seconds: p.seconds, hints: p.hints, patterns: p.patterns, solvedAt: p.solvedAt,
     })),
   });

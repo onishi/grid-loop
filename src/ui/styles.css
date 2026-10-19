@@ -1406,6 +1406,10 @@ body.no-anim .app { transition: none !important; }
 .menu-list .menu-row .mi, .menu-nav .mi { margin-right: 0; }
 .menu-row .chev { color: var(--ink-faint); }
 .report-row { margin-top: 0; }
+.problem-info { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.problem-info-head { display: flex; align-items: center; gap: 8px; }
+.problem-info-head .mi { color: var(--ink-faint); font-size: 20px; }
+.problem-info-meta { margin: 6px 0 0; white-space: pre-line; font-size: .85rem; color: var(--ink-soft); max-height: 8.5em; overflow-y: auto; }
 
 /* 下の行は、ひとつながりの一覧にする */
 .menu-list { margin-top: 18px; display: flex; flex-direction: column; }

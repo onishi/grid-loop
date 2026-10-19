@@ -395,7 +395,7 @@ test('公開した問題集を、ログインした人が遊べて、解いた�
   const make = async (title, codes) => {
     const id = (await call('/api/admin/books', { method: 'POST', cookie: admin, body: { title } })).data.book.id;
     await call(`/api/admin/books/${id}/problems`, { method: 'POST', cookie: admin, body: { problems:
-      codes.map((code) => ({ code, rows: 5, cols: 5, difficulty: 'normal', clueCount: 10 })) } });
+      codes.map((code, i) => ({ code, rows: 5, cols: 5, difficulty: 'normal', clueCount: 10, meta: i === 0 ? '第 1 問' : undefined })) } });
     return id;
   };
   const open = await make('公開', ['5nP1', '5nP2', '5nP3']);
@@ -420,6 +420,8 @@ test('公開した問題集を、ログインした人が遊べて、解いた�
   const detail = (await call(`/api/books/${open}`, { cookie })).data;
   assert.deepEqual(detail.problems.map((p) => [p.position, p.code, p.solved, p.seconds]),
     [[1, '5nP1', false, null], [2, '5nP2', true, 60], [3, '5nP3', false, null]]);
+  // 取り込んだときに読んだ文字も、遊ぶ側に返す（メニューに出す）
+  assert.deepEqual(detail.problems.map((p) => p.meta), ['第 1 問', null, null]);
   // ほかの人には付かない
   const other = (await loginAs({ sub: 'player-2' })).cookie;
   assert.equal((await call('/api/books', { cookie: other })).data.books[0].solved, 0);

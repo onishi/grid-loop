@@ -231,11 +231,11 @@ export class BookShelf {
     }
   }
 
-  /** いま遊んでいる問題集の名前と、何番か（{ title, position, count }）。問題集で遊んでいなければ null。 */
+  /** いま遊んでいる問題集の名前と、何番か、取り込んだときに盤のまわりから読んだ文字（{ title, position, count, meta }）。問題集で遊んでいなければ null。 */
   where() {
     if (!this.current) return null;
     const { book, problems, index } = this.current;
-    return { bookId: book.id, title: book.title, position: problems[index].position, count: problems.length };
+    return { bookId: book.id, title: book.title, position: problems[index].position, count: problems.length, meta: problems[index].meta ?? null };
   }
 
   /** 解いたとき：印（時間・ヒントの回数）を付けて、次に遊ぶ問題（まだ解いていない、後ろの問題。無ければ前から）を返す。 */
