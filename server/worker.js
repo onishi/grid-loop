@@ -7,6 +7,7 @@
  */
 
 import { verifyGoogleIdToken } from './google.js';
+import { orderBooks } from '../src/core/book-order.js';
 
 const COOKIE = 'gl_session';
 const SESSION_DAYS = 60;
@@ -82,6 +83,9 @@ async function route(request, env, url) {
   }
   if (pathname === '/api/history' && method === 'POST') return addHistory(db, user.id, await body(request));
   if (pathname === '/api/books' && method === 'GET') return publishedBooks(db, user.id, isAdmin(user, env));
+  if (/^\/api\/books\/\d+\/play$/.test(pathname) && method === 'POST') {
+    return recordBookPlay(db, user.id, Number(pathname.split('/')[3]), isAdmin(user, env));
+  }
   if (pathname.startsWith('/api/books/') && method === 'GET') return publishedBook(db, user.id, Number(pathname.split('/')[3]), isAdmin(user, env));
   // 問題集の 1 問の、自分の解いた印（クリアの記録）を消す：DELETE /api/books/:id/problems/:pid/solved
   if (pathname.startsWith('/api/books/') && method === 'DELETE') return forgetSolved(db, user.id, pathname, isAdmin(user, env));
@@ -324,12 +328,28 @@ async function publishedBooks(db, userId, adminUser = false) {
   const { results } = await db.prepare(
     `SELECT b.id, b.title, b.description, b.published, COUNT(p.id) AS count,
        COUNT(s.problem_id) AS solved,
+       MAX(COALESCE(a.last_played_at, 0), COALESCE(MAX(s.solved_at), 0)) AS lastPlayedAt,
        MIN(p.rows * p.cols) AS minCells, MAX(p.rows * p.cols) AS maxCells
      FROM books b JOIN book_problems p ON p.book_id = b.id
      LEFT JOIN book_solved s ON s.problem_id = p.id AND s.user_id = ?
+     LEFT JOIN book_activity a ON a.book_id = b.id AND a.user_id = ?
      WHERE ${playableWhere(adminUser)} GROUP BY b.id ORDER BY b.created_at, b.id`,
-  ).bind(userId).all();
-  return json({ books: results.map(({ published, ...b }) => ({ ...b, visibility: visibilityOf(published) })) });
+  ).bind(userId, userId).all();
+  return json({ books: orderBooks(results.map(({ published, ...b }) => ({ ...b, visibility: visibilityOf(published) }))) });
+}
+
+async function recordBookPlay(db, userId, id, adminUser) {
+  const book = await db.prepare(
+    `SELECT b.id FROM books b WHERE b.id = ? AND ${playableWhere(adminUser)}
+     AND EXISTS (SELECT 1 FROM book_problems p WHERE p.book_id = b.id)`,
+  ).bind(id).first();
+  if (!book) throw new HttpError(404, 'その問題集はありません');
+  const lastPlayedAt = Date.now();
+  await db.prepare(
+    `INSERT INTO book_activity (user_id, book_id, last_played_at) VALUES (?, ?, ?)
+     ON CONFLICT (user_id, book_id) DO UPDATE SET last_played_at = MAX(book_activity.last_played_at, excluded.last_played_at)`,
+  ).bind(userId, id, lastPlayedAt).run();
+  return json({ ok: true, lastPlayedAt });
 }
 
 /** 問題集の 1 問の、その人の解いた印を消す（遊べる問題集の問題だけ）。 */
@@ -493,6 +513,7 @@ async function admin(request, db, url) {
   if (parts.length === 2 && method === 'DELETE') {
     await db.batch([
       db.prepare('DELETE FROM book_solved WHERE problem_id IN (SELECT id FROM book_problems WHERE book_id = ?)').bind(id),
+      db.prepare('DELETE FROM book_activity WHERE book_id = ?').bind(id),
       db.prepare('DELETE FROM book_problems WHERE book_id = ?').bind(id),
       db.prepare('DELETE FROM books WHERE id = ?').bind(id),
     ]);

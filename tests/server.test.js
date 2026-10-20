@@ -8,7 +8,7 @@ import { verifyGoogleIdToken, resetKeyCache } from '../server/google.js';
 
 const CLIENT_ID = 'test-client.apps.googleusercontent.com';
 const ORIGIN = 'https://gridloop.example';
-const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql', '0011_teacher_ids.sql', '0012_history_book.sql']
+const SCHEMA = ['0001_init.sql', '0002_books.sql', '0003_problem_stats.sql', '0004_coverage_origin.sql', '0005_largest_gap.sql', '0006_book_solved.sql', '0007_generator.sql', '0008_patterns.sql', '0009_problem_meta.sql', '0010_settings.sql', '0011_teacher_ids.sql', '0012_history_book.sql', '0013_book_activity.sql']
   .map((f) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8')).join('\n');
 
 /** D1 と同じ呼び方（prepare → bind → run/first/all、batch）ができる薄い入れ物。 */
@@ -586,4 +586,60 @@ test('解いた履歴に、問題集で遊んでいたならその問題集と�
   assert.deepEqual(by['5nHB1'], { id: 7, title: '初級編', position: 3 });
   assert.equal(by['5nHB2'], undefined);
   assert.equal(by['5nHB3'], undefined); // おかしな問題集は残さない
+});
+
+test('問題集はプレイ中を先頭にまとめ、1問も解いていなくても最新プレイ順になる', async () => {
+  const admin = (await loginAs({ sub: 'admin-1' })).cookie;
+  const { cookie } = await loginAs({ sub: 'book-order-user' });
+  const make = async (title, count = 2) => {
+    const id = (await call('/api/admin/books', { method: 'POST', cookie: admin, body: { title } })).data.book.id;
+    await call(`/api/admin/books/${id}/problems`, { method: 'POST', cookie: admin,
+      body: { problems: Array.from({ length: count }, (_, i) => ({ code: `5n${title}${i}`, rows: 5, cols: 5, difficulty: 'normal', clueCount: 10 })) } });
+    await call(`/api/admin/books/${id}`, { method: 'PATCH', cookie: admin, body: { visibility: 'public' } });
+    return id;
+  };
+  const unseen = await make('A');
+  const older = await make('B');
+  const complete = await make('C', 1);
+  const started = await make('D');
+  const newest = await make('E');
+  const mark = (id, at) => env.DB.raw.prepare('INSERT INTO book_solved (user_id, problem_id, seconds, hints, patterns, solved_at) SELECT ?, id, 60, 0, 0, ? FROM book_problems WHERE book_id = ? AND position = 1').run('book-order-user', at, id);
+  mark(older, 10); mark(complete, 500);
+  // 一覧・詳細を見るだけではプレイ記録を付けない。
+  await call(`/api/books/${unseen}`, { cookie });
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) n FROM book_activity').get().n, 0);
+  assert.equal((await call(`/api/books/${started}/play`, { method: 'POST', cookie, body: {} })).status, 200);
+  env.DB.raw.prepare('UPDATE book_activity SET last_played_at = 100 WHERE book_id = ?').run(started);
+  const play = await call(`/api/books/${newest}/play`, { method: 'POST', cookie, body: {} });
+  assert.equal(play.status, 200);
+  assert.ok(play.data.lastPlayedAt > 100);
+  const list = (await call('/api/books', { cookie })).data.books;
+  assert.deepEqual(list.map(b => b.id), [newest, started, older, unseen, complete]);
+  assert.equal(list[0].solved, 0);
+  assert.equal(list.find(b => b.id === older).lastPlayedAt, 10);
+  // 同じ問題集を再開すれば、重複行を作らず最新日時にする。
+  await call(`/api/books/${started}/play`, { method: 'POST', cookie, body: {} });
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) n FROM book_activity WHERE user_id = ? AND book_id = ?').get('book-order-user', started).n, 1);
+  assert.ok(env.DB.raw.prepare('SELECT last_played_at at FROM book_activity WHERE book_id = ?').get(started).at > 100);
+  // 利用者ごとの記録で、他の利用者の順には影響しない。
+  const other = (await loginAs({ sub: 'book-order-other' })).cookie;
+  assert.deepEqual((await call('/api/books', { cookie: other })).data.books.map(b => b.id), [unseen, older, complete, started, newest]);
+  await call(`/api/admin/books/${started}`, { method: 'DELETE', cookie: admin });
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) n FROM book_activity WHERE book_id = ?').get(started).n, 0);
+});
+
+test('問題集のプレイ記録は、ログインと公開範囲を守る', async () => {
+  const admin = (await loginAs({ sub: 'admin-1' })).cookie;
+  const cookie = (await loginAs({ sub: 'book-activity-user' })).cookie;
+  const id = (await call('/api/admin/books', { method: 'POST', cookie: admin, body: { title: '秘密' } })).data.book.id;
+  await call(`/api/admin/books/${id}/problems`, { method: 'POST', cookie: admin,
+    body: { problems: [{ code: '5nACT', rows: 5, cols: 5, difficulty: 'normal', clueCount: 10 }] } });
+  const play = (c, n = id) => call(`/api/books/${n}/play`, { method: 'POST', cookie: c, body: {} });
+  assert.equal((await play(undefined)).status, 401);
+  assert.equal((await play(cookie)).status, 404);
+  await call(`/api/admin/books/${id}`, { method: 'PATCH', cookie: admin, body: { visibility: 'admin' } });
+  assert.equal((await play(cookie)).status, 404);
+  assert.equal((await play(admin)).status, 200);
+  assert.equal((await play(admin, 99999)).status, 404);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) n FROM book_activity WHERE user_id = ?').get('book-activity-user').n, 0);
 });

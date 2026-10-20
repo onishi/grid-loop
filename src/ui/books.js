@@ -9,6 +9,7 @@ import { api } from './account.js';
 import { store } from './storage.js';
 import { DIFFICULTIES } from '../core/generator.js';
 import { samePuzzle } from '../core/puzzle.js';
+import { orderBooks } from '../core/book-order.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, className, text) => {
@@ -58,7 +59,9 @@ export class BookShelf {
       list.append(el('li', 'library-empty', 'まだ遊べる問題集がありません。'));
       return;
     }
-    for (const b of books) {
+    const current = books.find(b => b.id === this.current?.book.id);
+    if (current) current.solved = Math.max(current.solved, this.current.problems.filter(p => p.solved).length);
+    for (const b of orderBooks(books, store.bookPlay())) {
       const li = el('li');
       const btn = el('button', 'book-item');
       btn.type = 'button';
@@ -164,15 +167,38 @@ export class BookShelf {
 
   /** 問題集の i 番目の問題で遊び始める。 */
   playAt(set, i) {
+    const before = this.current;
+    const recordedBefore = this.lastRecorded;
+    this.lastRecorded = null;
     this.current = { book: set.book, problems: set.problems, index: i };
-    this.remember();
-    if (this.hooks.play(set.problems[i].code)) this.hooks.closeMenu();
+    if (this.hooks.play(set.problems[i].code)) {
+      this.remember();
+      this.hooks.closeMenu();
+    } else {
+      this.current = before;
+      this.lastRecorded = recordedBefore;
+    }
   }
 
   /** いま遊んでいる問題集と問題を端末に覚える（ページを開き直しても、問題集の続きとして扱えるように）。 */
   remember() {
     const { book, problems, index } = this.current;
-    store.saveBookPlay({ bookId: book.id, code: problems[index].code });
+    const code = problems[index].code;
+    const key = `${store.cachedUser()?.id ?? 'guest'}:${book.id}:${code}`;
+    if (this.lastRecorded?.key !== key) {
+      this.lastRecorded = { key, playedAt: Date.now() };
+      const activity = this.lastRecorded;
+      // 通信に失敗してもプレイを止めず、端末の日時で一覧の並びを保つ。
+      api(`/api/books/${book.id}/play`, { method: 'POST', body: {} }).then(({ lastPlayedAt }) => {
+        if (this.lastRecorded !== activity) return;
+        activity.playedAt = lastPlayedAt;
+        const saved = store.bookPlay();
+        if (saved?.bookId === book.id && saved.code === code) store.saveBookPlay({ ...saved, playedAt: lastPlayedAt });
+      }).catch(() => {
+        if (this.lastRecorded === activity) this.lastRecorded = null;
+      });
+    }
+    store.saveBookPlay({ bookId: book.id, code, playedAt: this.lastRecorded.playedAt });
   }
 
   /**
@@ -188,6 +214,7 @@ export class BookShelf {
       // 待っているあいだに別の問題へ移っていたら、何もしない
       if (index < 0 || this.current || !samePuzzle(store.bookPlay()?.code ?? '', code)) return;
       this.current = { book: set.book, problems: set.problems, index };
+      this.remember();
       this.hooks.onChange?.();
     } catch {
       // ログインしていない・問題集が非公開になったなど：ふつうの問題として遊ぶ
@@ -224,6 +251,7 @@ export class BookShelf {
     const i = this.current.problems.findIndex((p) => p.code === code);
     if (i < 0) {
       this.current = null;
+      this.lastRecorded = null;
       store.clearBookPlay();
     } else {
       this.current.index = i;
