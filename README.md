@@ -375,7 +375,9 @@ npm start          # http://localhost:8080/ で開く
 
 API トークンは Cloudflare の **My Profile → API Tokens → Create Token** から、
 テンプレート **Edit Cloudflare Workers** で作れます。
-公開先は `https://gridloop.<サブドメイン>.workers.dev` です。
+公開先は `https://gridloop.wagaya.org/` です（`wrangler.jsonc` の `routes`）。
+公開先は Cloudflare Access で守っていて、許可したアカウントでログインした人だけが開けます（設定は [playroom](https://github.com/onishi/playroom) にまとめてあります）。
+旧 URL `https://gridloop.<サブドメイン>.workers.dev` へ来たときは、パスとクエリを保ったまま公開先へ転送します。
 
 シークレットが未設定のあいだは、デプロイ手順だけを黙ってスキップします（CI は緑のまま）。
 
@@ -399,7 +401,7 @@ Cloudflare D1（データベース名 `gridloop`、スキーマは `migrations/`
   開いたときにそちらへ切り替えます（その端末でまだ手を動かしていないときだけ。送られてきたリンクで開いた問題はそのまま）。
 
 使うには、Google Cloud Console で **OAuth 2.0 クライアント ID（ウェブ アプリケーション）** を作り、
-「承認済みの JavaScript 生成元」に公開先（例 `https://gridloop.<サブドメイン>.workers.dev`）を入れて、
+「承認済みの JavaScript 生成元」に公開先（`https://gridloop.wagaya.org`）を入れて、
 そのクライアント ID を `wrangler.jsonc` の `vars.GOOGLE_CLIENT_ID` に書きます（秘密の値ではありません）。
 空のあいだは、ログインのボタンの代わりに「準備中」と出し、ゲストとしてだけ遊べます。
 

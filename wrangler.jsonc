@@ -1,13 +1,20 @@
 {
   // 静的ファイル（`npm run build:site` で作る _site/）と、/api/ を受けるサーバー（server/worker.js）。
-  // /api/ 以外はサーバーを通さず、静的ファイルをそのまま返す。
+  // /api/ 以外は静的ファイルをそのまま返す（workers.dev で来たときだけ公開 URL へ転送する）。
   "name": "gridloop",
   "main": "server/worker.js",
   "compatibility_date": "2026-09-17",
+  // 公開は gridloop.wagaya.org。Cloudflare Access で守る。
+  // 旧 URL（workers.dev）は server/worker.js が新しい URL へ転送するだけにしてある。
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "gridloop.wagaya.org", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./_site",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
   // ログインした人の問題リスト・履歴・自己ベスト・途中の盤面（スキーマは migrations/）
   "d1_databases": [

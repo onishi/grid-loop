@@ -17,9 +17,18 @@ const HISTORY_PAGE = 200;
 const MAX_CODE = 1400; // 50×50 の盤のコードも入る長さ
 const MAX_GAME_BYTES = 64 * 1024;
 
+const CANONICAL_HOSTNAME = 'gridloop.wagaya.org';
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // 旧 URL（*.workers.dev）は Cloudflare Access を通らないので、公開 URL へ転送するだけにする
+    if (url.hostname.endsWith('.workers.dev')) {
+      url.protocol = 'https:';
+      url.hostname = CANONICAL_HOSTNAME;
+      url.port = '';
+      return Response.redirect(url.toString(), 308);
+    }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     try {
       return await route(request, env, url);
